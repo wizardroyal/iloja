@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-oat text-ink font-sans;
+  }
+}
+
+@layer components {
+  /* Mobile frame: every product surface lives inside 390px on a desktop background. */
+  .mobile-frame {
+    @apply mx-auto w-full max-w-mobile bg-cream min-h-screen;
+  }
+}
