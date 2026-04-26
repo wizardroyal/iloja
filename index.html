@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Iloja — Screen Reference</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400&family=DM+Sans:wght@0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:#E8E4DA;min-height:100vh;padding:48px 32px;}
+.wrap{max-width:800px;margin:0 auto;}
+h1{font-family:'Fraunces',serif;font-size:36px;font-weight:400;color:#1A3C34;margin-bottom:6px;}
+.sub{font-size:14px;color:#5C5C54;margin-bottom:40px;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;}
+.card{background:#fff;border-radius:16px;overflow:hidden;border:1px solid #E0DDD5;box-shadow:0 2px 8px rgba(26,60,52,.08);text-decoration:none;color:inherit;transition:box-shadow .15s;}
+.card:hover{box-shadow:0 6px 24px rgba(26,60,52,.14);}
+.card-thumb{height:100px;display:flex;align-items:center;justify-content:center;font-size:32px;}
+.card-body{padding:14px;}
+.card-num{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#7A7A70;margin-bottom:4px;}
+.card-title{font-size:14px;font-weight:600;color:#1A1A18;margin-bottom:4px;}
+.card-desc{font-size:12px;color:#5C5C54;line-height:1.5;}
+.note{margin-top:40px;background:#EAF3DE;border:1px solid #A8D5B5;border-radius:12px;padding:16px 18px;}
+.note p{font-size:13px;color:#2D6A4F;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Iloja</h1>
+<p class="sub">UI screen reference &mdash; 7 screens &mdash; open each file in Chrome or Safari</p>
+<div class="grid">
+  <a class="card" href="01-home.html"><div class="card-thumb" style="background:linear-gradient(135deg,#2D6A4F,#1A3C34);">&#127968;</div><div class="card-body"><div class="card-num">Screen 01</div><div class="card-title">Home / Discovery</div><div class="card-desc">Renter search experience. Property cards, benchmarking, filters, bottom nav.</div></div></a>
+  <a class="card" href="02-property-detail.html"><div class="card-thumb" style="background:linear-gradient(135deg,#3D8060,#1A3C34);">&#128206;</div><div class="card-body"><div class="card-num">Screen 02</div><div class="card-title">Property Detail</div><div class="card-desc">Full listing with verified ribbon, escrow CTA, agent card, price benchmarking.</div></div></a>
+  <a class="card" href="03-agent-profile.html"><div class="card-thumb" style="background:linear-gradient(135deg,#52A679,#2D6A4F);">&#9733;</div><div class="card-body"><div class="card-num">Screen 03</div><div class="card-title">Agent Profile</div><div class="card-desc">Credibility ring, badge tiers, listings, reviews, about. Tabs are interactive.</div></div></a>
+  <a class="card" href="04-escrow-booking.html"><div class="card-thumb" style="background:linear-gradient(135deg,#1A5C44,#0D2E22);">&#128274;</div><div class="card-body"><div class="card-num">Screen 04</div><div class="card-title">Escrow Booking</div><div class="card-desc">3-step interactive flow: schedule &rarr; escrow confirm &rarr; success receipt.</div></div></a>
+  <a class="card" href="05-chat-offer.html"><div class="card-thumb" style="background:linear-gradient(135deg,#4A8E6C,#2A5C44);">&#128172;</div><div class="card-body"><div class="card-num">Screen 05</div><div class="card-title">Chat &amp; Offer Flow</div><div class="card-desc">In-app negotiation with offer cards. Tap Accept to see the full acceptance flow.</div></div></a>
+  <a class="card" href="06-agent-dashboard.html"><div class="card-thumb" style="background:linear-gradient(135deg,#1F5C42,#0D2420);">&#128200;</div><div class="card-body"><div class="card-num">Screen 06</div><div class="card-title">Agent CRM Dashboard</div><div class="card-desc">Agent home: score, lead pipeline, inspection calendar, listing analytics.</div></div></a>
+  <a class="card" href="07-listing-creation.html"><div class="card-thumb" style="background:linear-gradient(135deg,#2D6A4F,#1A3C34);">&#10133;</div><div class="card-body"><div class="card-num">Screen 07</div><div class="card-title">Listing Creation</div><div class="card-desc">4-step interactive flow: type &rarr; details &rarr; photos &rarr; verification submitted.</div></div></a>
+</div>
+<div class="note">
+  <p><strong>Design system:</strong> Fraunces (display &amp; prices) + DM Sans (body) &middot; Forest #1A3C34 / Grove #2D6A4F &middot; Cream #F7F4EE backgrounds &middot; All screens are 390px mobile-first &middot; Screens 03, 04, 05, 07 are interactive &mdash; click through the flows.</p>
+</div>
+</div>
+</body>
+</html>

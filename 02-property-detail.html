@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iloja — Property Detail</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,300;1,9..144,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+:root{--forest:#1A3C34;--grove:#2D6A4F;--sage:#52A679;--mist:#A8D5B5;--foam:#EAF3DE;--cream:#F7F4EE;--parchment:#EDE9E0;--text-primary:#1A1A18;--text-secondary:#5C5C54;--text-tertiary:#7A7A70;--border:#C8C4B8;--border-light:#E0DDD5;--surface:#FFFFFF;--display:'Fraunces',Georgia,serif;--body:'DM Sans',sans-serif;--sh-sm:0 1px 4px rgba(26,60,52,.08);--sh-md:0 4px 20px rgba(26,60,52,.11),0 2px 6px rgba(26,60,52,.07);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--body);background:#E8E4DA;display:flex;justify-content:center;min-height:100vh;padding:32px 16px;}
+.shell{width:390px;background:var(--forest);border-radius:50px;padding:14px;box-shadow:0 32px 80px rgba(26,60,52,.35),0 0 0 1.5px #2D6A4F,inset 0 1px 0 rgba(255,255,255,.1);}
+.screen{background:var(--cream);border-radius:38px;overflow:hidden;height:812px;display:flex;flex-direction:column;position:relative;}
+.sbar{position:absolute;top:0;left:0;right:0;z-index:10;padding:14px 28px 0;display:flex;justify-content:space-between;align-items:center;pointer-events:none;}
+.sbar-time{font-size:13px;font-weight:600;color:#fff;}
+.sbar-icons{display:flex;gap:5px;opacity:.9;}
+.hero-img{height:290px;flex-shrink:0;position:relative;overflow:hidden;background:linear-gradient(160deg,#3D8060 0%,#1A3C34 55%,#0D2420 100%);}
+.room-lines{position:absolute;inset:0;opacity:.1;background:repeating-linear-gradient(90deg,transparent,transparent 40px,rgba(255,255,255,.3) 41px),repeating-linear-gradient(0deg,transparent,transparent 60px,rgba(255,255,255,.3) 61px);}
+.hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.2) 0%,rgba(0,0,0,0) 40%,rgba(26,60,52,.72) 100%);}
+.nav-btn{position:absolute;z-index:5;width:36px;height:36px;background:rgba(255,255,255,.18);backdrop-filter:blur(8px);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid rgba(255,255,255,.28);}
+.img-dots{position:absolute;bottom:68px;left:0;right:0;display:flex;justify-content:center;gap:5px;}
+.img-dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.45);}
+.img-dot.active{background:#fff;width:16px;border-radius:3px;}
+.photo-count{position:absolute;bottom:68px;right:16px;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);color:#fff;font-size:10px;font-weight:500;padding:3px 8px;border-radius:20px;}
+.verified-ribbon{position:absolute;bottom:0;left:0;right:0;background:rgba(26,60,52,.88);backdrop-filter:blur(8px);padding:9px 20px;display:flex;align-items:center;justify-content:space-between;}
+.vr-left{display:flex;align-items:center;gap:7px;}
+.vr-icon{width:22px;height:22px;background:#52A679;border-radius:6px;display:flex;align-items:center;justify-content:center;}
+.vr-label{font-size:11px;font-weight:600;color:#A8D5B5;letter-spacing:.04em;}
+.vr-sub{font-size:9px;color:rgba(168,213,181,.7);margin-top:1px;}
+.vr-hash{font-size:9px;color:rgba(168,213,181,.55);font-family:monospace;}
+.scroll{flex:1;overflow-y:auto;scrollbar-width:none;}
+.scroll::-webkit-scrollbar{display:none;}
+.price-block{padding:18px 20px 0;}
+.price-row{display:flex;align-items:baseline;gap:5px;margin-bottom:4px;}
+.price{font-family:var(--display);font-size:28px;font-weight:500;color:var(--forest);}
+.period{font-size:13px;color:var(--text-tertiary);font-weight:300;}
+.title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px;}
+.prop-title{font-family:var(--display);font-size:20px;font-weight:400;color:var(--text-primary);line-height:1.25;letter-spacing:-.2px;}
+.loc-row{display:flex;align-items:center;gap:5px;margin-bottom:14px;}
+.loc-text{font-size:13px;color:var(--text-secondary);}
+.pad{padding:0 20px;}
+.stat-row{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+.stat-pill{display:flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--border-light);border-radius:10px;padding:7px 11px;box-shadow:var(--sh-sm);}
+.stat-icon{font-size:13px;}
+.stat-val{font-size:12px;font-weight:600;color:var(--text-primary);}
+.stat-lbl{font-size:10px;color:var(--text-secondary);}
+.bench{background:var(--foam);border:1px solid var(--mist);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;margin-bottom:18px;}
+.bench-ic{width:32px;height:32px;background:var(--grove);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.bench-lbl{font-size:9.5px;font-weight:700;color:var(--grove);letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px;}
+.bench-val{font-family:var(--display);font-size:14px;color:var(--forest);}
+.bench-sub{font-size:10px;color:var(--text-secondary);margin-top:1px;}
+.bench-pos{margin-left:auto;flex-shrink:0;text-align:right;}
+.bench-pos-val{font-size:11px;font-weight:700;color:#2D7DD2;}
+.bench-pos-lbl{font-size:9px;color:var(--text-tertiary);margin-top:1px;}
+.divider{height:1px;background:var(--border-light);margin:0 20px 18px;}
+.sec-lbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:10px;}
+.agent-card{background:var(--surface);border:1px solid var(--border-light);border-radius:16px;padding:14px;box-shadow:var(--sh-sm);display:flex;align-items:center;gap:12px;margin-bottom:18px;cursor:pointer;}
+.agent-av{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,var(--grove),var(--forest));display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0;position:relative;}
+.agent-badge-pos{position:absolute;bottom:-5px;right:-5px;width:20px;height:20px;border:2px solid var(--surface);border-radius:50%;background:var(--surface);display:flex;align-items:center;justify-content:center;}
+.agent-info{flex:1;}
+.agent-name{font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:2px;display:flex;align-items:center;gap:5px;}
+.agent-meta{font-size:11px;color:var(--text-tertiary);margin-bottom:6px;}
+.agent-stats{display:flex;gap:10px;}
+.astat-val{font-family:var(--display);font-size:14px;font-weight:500;color:var(--forest);}
+.astat-lbl{font-size:9px;color:var(--text-tertiary);}
+.astat-sep{width:1px;background:var(--border-light);align-self:stretch;margin:2px 4px;}
+.agent-action{font-size:11px;font-weight:600;color:var(--forest);background:var(--parchment);border:1.5px solid var(--border);border-radius:9px;padding:7px 11px;white-space:nowrap;}
+.desc{font-size:13px;color:var(--text-secondary);line-height:1.65;margin-bottom:18px;}
+.desc-more{color:var(--grove);font-weight:500;cursor:pointer;}
+.amenities{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px;}
+.amenity{display:flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--border-light);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:500;color:var(--text-secondary);box-shadow:var(--sh-sm);}
+.cta-dock{background:var(--surface);border-top:1px solid var(--border-light);padding:14px 20px 24px;flex-shrink:0;box-shadow:0 -6px 24px rgba(26,60,52,.07);}
+.cta-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.cta-escrow-note{display:flex;align-items:center;gap:6px;}
+.cta-escrow-icon{width:26px;height:26px;background:var(--foam);border:1px solid var(--mist);border-radius:7px;display:flex;align-items:center;justify-content:center;}
+.cta-escrow-text{font-size:11px;color:var(--grove);font-weight:600;}
+.cta-fee{text-align:right;}
+.cta-fee-lbl{font-size:9px;color:var(--text-tertiary);}
+.cta-fee-val{font-size:13px;font-weight:700;color:var(--text-primary);}
+.cta-btns{display:flex;gap:8px;}
+.btn-inspect{flex:1;padding:13px;background:var(--parchment);border:2px solid var(--forest);border-radius:14px;font-family:var(--body);font-size:13px;font-weight:700;color:var(--forest);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
+.btn-enquire{flex:2;padding:13px;background:var(--forest);border-radius:14px;font-family:var(--body);font-size:14px;font-weight:600;color:#fff;cursor:pointer;border:none;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 4px 14px rgba(26,60,52,.30);}
+.sp28{height:28px;}
+</style>
+</head>
+<body>
+<div class="shell"><div class="screen">
+<div class="sbar"><span class="sbar-time">9:41</span><div class="sbar-icons"><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><rect x="0" y="4" width="3" height="8" rx="1" fill="white"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="white"/><rect x="9" y=".5" width="3" height="11.5" rx="1" fill="white"/><rect x="13.5" y=".5" width="2.5" height="11.5" rx="1" fill="rgba(255,255,255,.3)"/></svg><svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="rgba(255,255,255,.5)"/><rect x="2" y="2" width="15" height="8" rx="2" fill="white"/><path d="M23 4.5v3a1.5 1.5 0 000-3z" fill="rgba(255,255,255,.4)"/></svg></div></div>
+<div class="hero-img"><div class="room-lines"></div><div class="hero-overlay"></div>
+<div class="nav-btn" style="top:52px;left:20px;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 13L5 8l5-5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+<div class="nav-btn" style="top:52px;right:20px;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13.5L2.5 8.5C1.5 7.5 1.5 5.5 3 4.5S6 4 8 5.5C10 4 12 3.5 13 4.5S14.5 7.5 13.5 8.5L8 13.5z" stroke="white" stroke-width="1.5" fill="none"/></svg></div>
+<div class="img-dots"><div class="img-dot active"></div><div class="img-dot"></div><div class="img-dot"></div><div class="img-dot"></div></div>
+<div class="photo-count">1 / 12</div>
+<div class="verified-ribbon"><div class="vr-left"><div class="vr-icon"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6.5l2.5 2.5L10 3" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="vr-label">Verified Property</div><div class="vr-sub">Inspected 2 Apr 2026 · GPS confirmed</div></div></div><div><div class="vr-hash">0x3f7a...d4c1</div><div style="font-size:8px;color:rgba(168,213,181,.5);margin-top:1px;">On-chain record</div></div></div>
+</div>
+<div class="scroll">
+<div class="price-block"><div class="price-row"><div class="price">&#8358;850,000</div><div class="period">/ year</div></div><div class="title-row"><div class="prop-title">2-bedroom apartment,<br>Tejuosho area</div><svg width="26" height="26" viewBox="0 0 26 26" fill="none" style="flex-shrink:0;margin-top:2px;"><circle cx="13" cy="13" r="13" fill="#C9921A"/><path d="M7.5 13.5l3.5 3.5L18.5 9" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="loc-row"><svg width="12" height="14" viewBox="0 0 12 14" fill="none"><path d="M6 1C3.8 1 2 2.8 2 5c0 3.5 4 8 4 8s4-4.5 4-8c0-2.2-1.8-4-4-4z" stroke="#7A7A70" stroke-width="1.2" fill="none"/><circle cx="6" cy="5" r="1.5" fill="#7A7A70"/></svg><div class="loc-text">Yaba, Lagos Mainland &middot; 12 min to Ojota</div></div></div>
+<div class="pad"><div class="stat-row"><div class="stat-pill"><span class="stat-icon">&#127765;</span><div><div class="stat-val">2</div><div class="stat-lbl">Bedrooms</div></div></div><div class="stat-pill"><span class="stat-icon">&#128703;</span><div><div class="stat-val">2</div><div class="stat-lbl">Bathrooms</div></div></div><div class="stat-pill"><span class="stat-icon">&#9889;</span><div><div class="stat-val">24h</div><div class="stat-lbl">Generator</div></div></div><div class="stat-pill"><span class="stat-icon">&#128663;</span><div><div class="stat-val">1</div><div class="stat-lbl">Parking</div></div></div></div>
+<div class="bench"><div class="bench-ic"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 10L5 6.5l2.5 2.5L12 3" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="bench-lbl">Market price &middot; Yaba &middot; 2-bed</div><div class="bench-val">&#8358;750K &ndash; &#8358;1.05M</div><div class="bench-sub">34 verified rentals this quarter</div></div><div class="bench-pos"><div class="bench-pos-val">Fair</div><div class="bench-pos-lbl">vs. market</div></div></div></div>
+<div class="divider"></div>
+<div class="pad"><div class="sec-lbl">Listed by</div>
+<div class="agent-card"><div class="agent-av">K<div class="agent-badge-pos"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="8" fill="#C9921A"/><path d="M4.5 8.5l2.2 2.2L11.5 5.5" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div><div class="agent-info"><div class="agent-name">Kemi Adeyemi <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="7" fill="#C9921A"/><path d="M3.5 7l2.2 2.3L10.5 4.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="agent-meta">Yaba &middot; Surulere &middot; 8 yrs experience</div><div class="agent-stats"><div><div class="astat-val">4.8</div><div class="astat-lbl">Rating</div></div><div class="astat-sep"></div><div><div class="astat-val">82</div><div class="astat-lbl">Rentals</div></div><div class="astat-sep"></div><div><div class="astat-val">98%</div><div class="astat-lbl">Show-up</div></div><div class="astat-sep"></div><div><div class="astat-val">&lt;1h</div><div class="astat-lbl">Reply</div></div></div></div><div class="agent-action">View profile &rarr;</div></div>
+<div class="sec-lbl">About this property</div>
+<div class="desc">Spacious 2-bedroom flat on the 3rd floor of a secured estate. Tiled throughout, fitted kitchen, en-suite master bedroom. 24-hour generator and borehole water included in the annual rent. Inspection fee of &#8358;10,000 is protected by Iloja escrow &mdash; refunded in full if the property does not match this listing. <span class="desc-more">Read more</span></div>
+<div class="sec-lbl">Amenities</div>
+<div class="amenities"><div class="amenity">&#9889; 24h generator</div><div class="amenity">&#128167; Borehole water</div><div class="amenity">&#128274; Estate security</div><div class="amenity">&#128663; Parking</div><div class="amenity">&#128246; Fibre-ready</div><div class="amenity">&#127946; Shared gym</div></div>
+<div class="sp28"></div></div></div>
+<div class="cta-dock"><div class="cta-top"><div class="cta-escrow-note"><div class="cta-escrow-icon"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="4" width="10" height="8" rx="1.5" stroke="#2D6A4F" stroke-width="1.3"/><path d="M4 4V3a2.5 2.5 0 015 0v1" stroke="#2D6A4F" stroke-width="1.3" stroke-linecap="round"/><circle cx="6.5" cy="8" r=".9" fill="#2D6A4F"/></svg></div><div class="cta-escrow-text">Inspection fee protected by escrow</div></div><div class="cta-fee"><div class="cta-fee-lbl">Inspection fee</div><div class="cta-fee-val">&#8358;10,000</div></div></div>
+<div class="cta-btns"><button class="btn-inspect"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="10" rx="1.5" stroke="#1A3C34" stroke-width="1.3"/><path d="M4 6h6M4 9h4" stroke="#1A3C34" stroke-width="1.3" stroke-linecap="round"/></svg>Schedule</button><button class="btn-enquire"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2h10a1 1 0 011 1v7a1 1 0 01-1 1H4L1 13V3a1 1 0 011-1z" stroke="white" stroke-width="1.3" stroke-linejoin="round"/></svg>Message agent</button></div></div>
+</div></div>
+</body>
+</html>

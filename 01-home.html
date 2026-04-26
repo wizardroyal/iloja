@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iloja — Home Screen</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,300;1,9..144,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+:root{--forest:#1A3C34;--grove:#2D6A4F;--sage:#52A679;--mist:#A8D5B5;--foam:#EAF3DE;--cream:#F7F4EE;--parchment:#EDE9E0;--text-primary:#1A1A18;--text-secondary:#5C5C54;--text-tertiary:#7A7A70;--border:#C8C4B8;--border-light:#E0DDD5;--surface:#FFFFFF;--display:'Fraunces',Georgia,serif;--body:'DM Sans',sans-serif;--sh-sm:0 1px 4px rgba(26,60,52,.08),0 1px 2px rgba(26,60,52,.06);--sh-md:0 4px 20px rgba(26,60,52,.11),0 2px 6px rgba(26,60,52,.07);--sh-lg:0 12px 40px rgba(26,60,52,.14);}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:var(--body);background:#E8E4DA;display:flex;justify-content:center;align-items:flex-start;min-height:100vh;padding:32px 16px;}
+.shell{width:390px;background:var(--forest);border-radius:50px;padding:14px;box-shadow:0 32px 80px rgba(26,60,52,.35),0 0 0 1.5px #2D6A4F,inset 0 1px 0 rgba(255,255,255,.1);}
+.screen{background:var(--cream);border-radius:38px;overflow:hidden;height:812px;position:relative;display:flex;flex-direction:column;}
+.sbar{background:var(--cream);padding:14px 28px 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+.sbar-time{font-size:13px;font-weight:600;color:var(--text-primary);}
+.sbar-icons{display:flex;gap:5px;align-items:center;}
+.top-nav{padding:12px 22px 0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.logo{font-family:var(--display);font-size:26px;font-weight:400;color:var(--forest);letter-spacing:-.3px;}
+.nav-right{display:flex;align-items:center;gap:10px;}
+.icon-btn{width:38px;height:38px;border-radius:50%;background:var(--parchment);border:1px solid var(--border-light);display:flex;align-items:center;justify-content:center;box-shadow:var(--sh-sm);cursor:pointer;position:relative;}
+.notif-dot{width:7px;height:7px;background:#E05A2B;border-radius:50%;position:absolute;top:6px;right:6px;border:1.5px solid var(--cream);}
+.avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--grove),var(--forest));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;font-family:var(--body);box-shadow:var(--sh-sm);cursor:pointer;}
+.hero{padding:16px 22px 0;flex-shrink:0;}
+.hero-greeting{font-size:12px;color:var(--text-tertiary);margin-bottom:2px;}
+.hero-title{font-family:var(--display);font-size:26px;font-weight:400;color:var(--forest);letter-spacing:-.4px;line-height:1.15;margin-bottom:14px;}
+.hero-title em{font-style:italic;font-weight:300;color:var(--grove);}
+.search-wrap{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:10px;box-shadow:var(--sh-sm);cursor:pointer;}
+.search-text{flex:1;}
+.search-label{font-size:12px;font-weight:500;color:var(--text-primary);}
+.search-hint{font-size:11px;color:var(--text-tertiary);margin-top:1px;}
+.search-filter{width:34px;height:34px;background:var(--forest);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.tabs{padding:14px 22px 0;display:flex;gap:6px;flex-shrink:0;}
+.tab{padding:7px 15px;border-radius:30px;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;font-family:var(--body);}
+.tab-active{background:var(--forest);color:#fff;}
+.tab-inactive{background:var(--parchment);color:var(--text-secondary);border:1.5px solid var(--border);}
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.scroll::-webkit-scrollbar{display:none;}
+.sec-head{display:flex;align-items:center;justify-content:space-between;padding:0 22px;margin-bottom:12px;}
+.sec-title{font-family:var(--display);font-size:18px;font-weight:400;color:var(--forest);letter-spacing:-.2px;}
+.sec-link{font-size:12px;color:var(--grove);font-weight:600;cursor:pointer;}
+.h-scroll{padding:0 22px;display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+.h-scroll::-webkit-scrollbar{display:none;}
+.prop-card{background:var(--surface);border-radius:18px;overflow:hidden;box-shadow:var(--sh-md);border:1px solid var(--border-light);flex-shrink:0;width:220px;cursor:pointer;}
+.prop-img{height:130px;position:relative;overflow:hidden;}
+.prop-img-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(26,60,52,0) 30%,rgba(26,60,52,.6) 100%);}
+.prop-top-badges{position:absolute;top:10px;left:10px;display:flex;gap:5px;}
+.v-badge{background:rgba(234,243,222,.96);color:var(--grove);font-size:9.5px;font-weight:700;padding:3px 8px;border-radius:6px;letter-spacing:.04em;display:flex;align-items:center;gap:3px;backdrop-filter:blur(4px);}
+.shortlet-badge{background:rgba(26,60,52,.88);color:#A8D5B5;font-size:9px;font-weight:600;padding:3px 8px;border-radius:6px;backdrop-filter:blur(4px);}
+.save-btn{position:absolute;top:10px;right:10px;width:28px;height:28px;background:rgba(255,255,255,.92);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.prop-bottom-info{position:absolute;bottom:8px;left:10px;right:10px;display:flex;align-items:center;justify-content:space-between;}
+.agent-mini{display:flex;align-items:center;gap:5px;}
+.agent-dot{width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;background:var(--grove);}
+.agent-score{font-size:9px;font-weight:600;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.4);}
+.gold-dot{background:#C9921A;}
+.prop-body{padding:12px 12px 14px;}
+.prop-price-row{display:flex;align-items:baseline;gap:3px;margin-bottom:4px;}
+.prop-price{font-family:var(--display);font-size:17px;font-weight:500;color:var(--forest);}
+.prop-period{font-size:10px;color:var(--text-tertiary);}
+.prop-title{font-size:12px;font-weight:500;color:var(--text-primary);margin-bottom:5px;line-height:1.3;}
+.prop-meta{display:flex;gap:8px;align-items:center;}
+.prop-loc{font-size:10.5px;color:var(--text-tertiary);display:flex;align-items:center;gap:2px;}
+.prop-rooms{font-size:10px;color:var(--text-secondary);background:var(--parchment);padding:2px 6px;border-radius:4px;font-weight:500;}
+.bench-strip{margin:0 22px;background:var(--foam);border:1px solid var(--mist);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;}
+.bench-icon{width:34px;height:34px;background:var(--grove);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.bench-lbl{font-size:9.5px;font-weight:700;color:var(--grove);letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px;}
+.bench-val{font-family:var(--display);font-size:15px;color:var(--forest);}
+.bench-sub{font-size:10px;color:var(--text-secondary);margin-top:1px;}
+.v-list{padding:0 22px;display:flex;flex-direction:column;gap:10px;}
+.v-card{background:var(--surface);border-radius:16px;overflow:hidden;box-shadow:var(--sh-sm);border:1px solid var(--border-light);display:flex;cursor:pointer;}
+.v-card-img{width:100px;flex-shrink:0;position:relative;overflow:hidden;}
+.v-card-body{flex:1;padding:10px 12px;}
+.v-price{font-family:var(--display);font-size:15px;font-weight:500;color:var(--forest);margin-bottom:2px;}
+.v-title{font-size:12px;font-weight:500;color:var(--text-primary);margin-bottom:4px;}
+.v-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.v-loc{font-size:10px;color:var(--text-tertiary);}
+.v-chip{font-size:9.5px;font-weight:600;padding:2px 7px;border-radius:5px;}
+.v-chip-green{background:var(--foam);color:var(--grove);}
+.v-chip-gold{background:#FEF3D7;color:#7A5008;}
+.v-agent-row{display:flex;align-items:center;gap:5px;margin-top:6px;}
+.v-agent-av{width:18px;height:18px;border-radius:50%;background:var(--grove);display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#fff;}
+.v-agent-name{font-size:10px;color:var(--text-secondary);}
+.v-agent-score{font-size:10px;font-weight:600;color:var(--grove);background:var(--foam);padding:1px 5px;border-radius:4px;}
+.bottom-nav{background:var(--surface);border-top:1px solid var(--border-light);padding:10px 0 20px;display:flex;justify-content:space-around;align-items:center;flex-shrink:0;}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;flex:1;}
+.nav-label{font-size:9.5px;font-weight:500;color:var(--text-tertiary);}
+.nav-label-active{color:var(--forest);}
+.nav-active-dot{width:4px;height:4px;background:var(--grove);border-radius:50%;margin:0 auto;}
+.sp{height:20px;}.sp14{height:14px;}.sp28{height:28px;}
+.g1{background:linear-gradient(135deg,#2D6A4F 0%,#1A3C34 100%);}
+.g2{background:linear-gradient(135deg,#52A679 0%,#2D6A4F 100%);}
+.g3{background:linear-gradient(135deg,#3D7A60 0%,#1F4A3A 100%);}
+.g4{background:linear-gradient(135deg,#1A5C44 0%,#0D2E22 100%);}
+.g5{background:linear-gradient(135deg,#4A8E6C 0%,#2A5C44 100%);}
+.g6{background:linear-gradient(160deg,#2D6A4F 0%,#52A679 60%,#1A3C34 100%);}
+</style>
+</head>
+<body>
+<div class="shell"><div class="screen">
+<div class="sbar"><span class="sbar-time">9:41</span><div class="sbar-icons"><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><rect x="0" y="4" width="3" height="8" rx="1" fill="#1A1A18"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#1A1A18"/><rect x="9" y=".5" width="3" height="11.5" rx="1" fill="#1A1A18"/><rect x="13.5" y=".5" width="2.5" height="11.5" rx="1" fill="#C8C4B8"/></svg><svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="#1A1A18" stroke-opacity=".35"/><rect x="2" y="2" width="15" height="8" rx="2" fill="#1A1A18"/><path d="M23 4.5v3a1.5 1.5 0 000-3z" fill="#1A1A18" fill-opacity=".4"/></svg></div></div>
+<div class="top-nav"><div class="logo">iloja</div><div class="nav-right"><div class="icon-btn"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2a5 5 0 015 5c0 2.5-1 4.5-2.5 6L9 16l-2.5-3C5 11.5 4 9.5 4 7a5 5 0 015-5z" stroke="#1A3C34" stroke-width="1.5" fill="none"/><circle cx="9" cy="7" r="1.5" fill="#1A3C34"/></svg><div class="notif-dot"></div></div><div class="avatar">A</div></div></div>
+<div class="hero"><div class="hero-greeting">Good morning, Adaeze</div><div class="hero-title">Find your<br><em>next home.</em></div><div class="search-wrap"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="8" cy="8" r="5.5" stroke="#7A7A70" stroke-width="1.5"/><path d="M12.5 12.5L15.5 15.5" stroke="#7A7A70" stroke-width="1.5" stroke-linecap="round"/></svg><div class="search-text"><div class="search-label">Where are you looking?</div><div class="search-hint">Yaba · Ikeja · Surulere · any area</div></div><div class="search-filter"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 8h8M6 12h4" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div></div></div>
+<div class="tabs"><div class="tab tab-active">All</div><div class="tab tab-inactive">Short-let</div><div class="tab tab-inactive">Long-term</div><div class="tab tab-inactive">Commercial</div></div>
+<div class="scroll">
+  <div class="sp14"></div>
+  <div class="bench-strip"><div class="bench-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 12L5.5 8l3 3L13 4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div style="flex:1;"><div class="bench-lbl">Market intelligence · Yaba</div><div class="bench-val">₦750K – ₦1.05M <span style="font-size:11px;font-weight:300;color:var(--grove);">/yr · 2-bed</span></div><div class="bench-sub">34 verified rentals this quarter</div></div></div>
+  <div class="sp"></div>
+  <div class="sec-head"><div class="sec-title">Short-lets nearby</div><a class="sec-link">See all →</a></div>
+  <div class="h-scroll">
+    <div class="prop-card"><div class="prop-img"><div class="g2" style="width:100%;height:100%;"></div><div class="prop-img-overlay"></div><div class="prop-top-badges"><div class="v-badge">✓ Verified</div><div class="shortlet-badge">Short-let</div></div><div class="save-btn"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 12L2 7.5C1 6.5 1 4.5 2.5 3.5S5.5 3 7 4.5C8.5 3 10.5 2.5 11.5 3.5S13 6.5 12 7.5L7 12z" stroke="#1A3C34" stroke-width="1.3" fill="none"/></svg></div><div class="prop-bottom-info"><div class="agent-mini"><div class="agent-dot gold-dot">O</div><div class="agent-score">★ 4.9</div></div><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="8" fill="#C9921A"/><path d="M4.5 8.5l2.2 2.2L11.5 5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div><div class="prop-body"><div class="prop-price-row"><div class="prop-price">₦55,000</div><div class="prop-period">/night</div></div><div class="prop-title">Studio serviced apartment, fully furnished</div><div class="prop-meta"><div class="prop-loc">📍 Lekki Phase 1</div><div class="prop-rooms">1 bed</div></div></div></div>
+    <div class="prop-card"><div class="prop-img"><div class="g5" style="width:100%;height:100%;"></div><div class="prop-img-overlay"></div><div class="prop-top-badges"><div class="v-badge">✓ Verified</div><div class="shortlet-badge">Short-let</div></div><div class="save-btn"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 12L2 7.5C1 6.5 1 4.5 2.5 3.5S5.5 3 7 4.5C8.5 3 10.5 2.5 11.5 3.5S13 6.5 12 7.5L7 12z" stroke="#1A3C34" stroke-width="1.3" fill="#1A3C34"/></svg></div><div class="prop-bottom-info"><div class="agent-mini"><div class="agent-dot">T</div><div class="agent-score">★ 4.7</div></div><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="8" fill="#C9921A"/><path d="M4.5 8.5l2.2 2.2L11.5 5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div><div class="prop-body"><div class="prop-price-row"><div class="prop-price">₦38,000</div><div class="prop-period">/night</div></div><div class="prop-title">Modern 2-bed short-let, pool access</div><div class="prop-meta"><div class="prop-loc">📍 Ikeja GRA</div><div class="prop-rooms">2 bed</div></div></div></div>
+    <div class="prop-card"><div class="prop-img"><div class="g6" style="width:100%;height:100%;"></div><div class="prop-img-overlay"></div><div class="prop-top-badges"><div class="v-badge">✓ Verified</div><div class="shortlet-badge">Short-let</div></div><div class="save-btn"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 12L2 7.5C1 6.5 1 4.5 2.5 3.5S5.5 3 7 4.5C8.5 3 10.5 2.5 11.5 3.5S13 6.5 12 7.5L7 12z" stroke="#1A3C34" stroke-width="1.3" fill="none"/></svg></div><div class="prop-bottom-info"><div class="agent-mini"><div class="agent-dot" style="background:#4A7FB5;">F</div><div class="agent-score">★ 4.8</div></div><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="8" fill="#6B4FBF"/><path d="M4.5 8.5l2.2 2.2L11.5 5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div><div class="prop-body"><div class="prop-price-row"><div class="prop-price">₦75,000</div><div class="prop-period">/night</div></div><div class="prop-title">Luxury penthouse, panoramic views</div><div class="prop-meta"><div class="prop-loc">📍 Victoria Island</div><div class="prop-rooms">3 bed</div></div></div></div>
+  </div>
+  <div class="sp"></div>
+  <div class="sec-head"><div class="sec-title">Long-term rentals</div><a class="sec-link">See all →</a></div>
+  <div class="v-list">
+    <div class="v-card"><div class="v-card-img"><div class="g1" style="height:100%;"></div><div style="position:absolute;top:6px;left:6px;background:rgba(234,243,222,.95);color:var(--grove);font-size:8px;font-weight:700;padding:2px 5px;border-radius:4px;">✓</div></div><div class="v-card-body"><div class="v-price">₦850,000 <span style="font-size:10px;font-weight:300;color:var(--text-tertiary);">/yr</span></div><div class="v-title">2-bedroom apartment · self-contained</div><div class="v-meta"><div class="v-loc">📍 Yaba</div><div class="v-chip v-chip-green">✓ Verified</div><div class="v-chip v-chip-gold">★ Gold</div></div><div class="v-agent-row"><div class="v-agent-av gold-dot">K</div><div class="v-agent-name">Kemi Adeyemi</div><div class="v-agent-score">4.8★</div></div></div></div>
+    <div class="v-card"><div class="v-card-img"><div class="g3" style="height:100%;"></div><div style="position:absolute;top:6px;left:6px;background:rgba(234,243,222,.95);color:var(--grove);font-size:8px;font-weight:700;padding:2px 5px;border-radius:4px;">✓</div></div><div class="v-card-body"><div class="v-price">₦1,200,000 <span style="font-size:10px;font-weight:300;color:var(--text-tertiary);">/yr</span></div><div class="v-title">3-bedroom flat, en-suite master</div><div class="v-meta"><div class="v-loc">📍 Surulere</div><div class="v-chip v-chip-green">✓ Verified</div></div><div class="v-agent-row"><div class="v-agent-av" style="background:#4A7FB5;">B</div><div class="v-agent-name">Biodun Lawal</div><div class="v-agent-score">4.9★</div></div></div></div>
+    <div class="v-card"><div class="v-card-img"><div class="g4" style="height:100%;"></div><div style="position:absolute;top:6px;left:6px;background:rgba(234,243,222,.95);color:var(--grove);font-size:8px;font-weight:700;padding:2px 5px;border-radius:4px;">✓</div></div><div class="v-card-body"><div class="v-price">₦600,000 <span style="font-size:10px;font-weight:300;color:var(--text-tertiary);">/yr</span></div><div class="v-title">1-bedroom self-con, generator included</div><div class="v-meta"><div class="v-loc">📍 Ikeja</div><div class="v-chip v-chip-green">✓ Verified</div></div><div class="v-agent-row"><div class="v-agent-av" style="background:#52A679;">E</div><div class="v-agent-name">Emeka Obi</div><div class="v-agent-score">4.6★</div></div></div></div>
+  </div>
+  <div class="sp28"></div>
+</div>
+<div class="bottom-nav">
+  <div class="nav-item"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M3 9.5L11 3l8 6.5V19a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" fill="#1A3C34" stroke="#1A3C34" stroke-width="1.3" stroke-linejoin="round"/><rect x="8" y="13" width="6" height="7" rx="1" fill="white"/></svg><div class="nav-active-dot"></div><div class="nav-label nav-label-active">Home</div></div>
+  <div class="nav-item"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="10" cy="10" r="6.5" stroke="#7A7A70" stroke-width="1.5"/><path d="M15 15l3.5 3.5" stroke="#7A7A70" stroke-width="1.5" stroke-linecap="round"/></svg><div class="nav-label">Search</div></div>
+  <div class="nav-item"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 4L4 8v10h14V8L11 4z" stroke="#7A7A70" stroke-width="1.5" stroke-linejoin="round"/><circle cx="11" cy="12" r="2" stroke="#7A7A70" stroke-width="1.3"/></svg><div class="nav-label">Saved</div></div>
+  <div class="nav-item"><div style="position:relative;"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M4 4h14a1 1 0 011 1v9a1 1 0 01-1 1H6l-3 3V5a1 1 0 011-1z" stroke="#7A7A70" stroke-width="1.5" stroke-linejoin="round"/></svg><div style="width:7px;height:7px;background:#E05A2B;border-radius:50%;position:absolute;top:-2px;right:-2px;border:1.5px solid var(--surface);"></div></div><div class="nav-label">Messages</div></div>
+  <div class="nav-item"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="8" r="3.5" stroke="#7A7A70" stroke-width="1.5"/><path d="M4 19c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="#7A7A70" stroke-width="1.5" stroke-linecap="round"/></svg><div class="nav-label">Profile</div></div>
+</div>
+</div></div>
+</body>
+</html>
