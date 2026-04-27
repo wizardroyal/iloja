@@ -363,6 +363,69 @@ export class IlojaClient {
     return this.request('POST', `/moderation/restrictions/${id}/lift`);
   }
 
+  // ───── Saved searches ─────
+
+  async listMySavedSearches(): Promise<SavedSearchResponse[]> {
+    return this.request('GET', '/saved-searches');
+  }
+
+  async createSavedSearch(input: {
+    label?: string;
+    type?: 'short_let' | 'long_term' | 'commercial';
+    neighborhood?: string;
+    bedrooms?: number;
+    minPriceKobo?: string;
+    maxPriceKobo?: string;
+  }): Promise<SavedSearchResponse> {
+    return this.request('POST', '/saved-searches', input);
+  }
+
+  async deleteSavedSearch(id: string): Promise<{ ok: true }> {
+    return this.request('DELETE', `/saved-searches/${id}`);
+  }
+
+  // ───── Tenancy agreement ─────
+
+  async generateAgreement(input: {
+    listingId: string;
+    renterId: string;
+    rentKobo: string;
+    startDate: string;
+    termMonths: number;
+    cautionKobo?: string;
+    additionalTerms?: string;
+  }): Promise<DocumentResponse> {
+    return this.request('POST', '/agreements', input);
+  }
+
+  // ───── Founding agent (admin) ─────
+
+  async awardFoundingAgent(userId: string, zone: string): Promise<{
+    userId: string;
+    badgeTier: string;
+    isFoundingAgent: boolean;
+    zone: string | null;
+  }> {
+    return this.request('POST', `/agents/${userId}/founding`, { zone });
+  }
+
+  // ───── Agent CRM subscription ─────
+
+  async myActiveSubscription(): Promise<SubscriptionResponse | null> {
+    return this.request('GET', '/subscriptions/me');
+  }
+
+  async startSubscription(plan: 'agent_crm_basic' | 'agent_crm_pro'): Promise<{
+    subscription: SubscriptionResponse;
+    authorizationUrl: string;
+  }> {
+    return this.request('POST', '/subscriptions', { plan });
+  }
+
+  async cancelSubscription(id: string): Promise<SubscriptionResponse> {
+    return this.request('POST', `/subscriptions/${id}/cancel`);
+  }
+
   // ───── internals ─────
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -578,6 +641,32 @@ export interface UserRestrictionResponse {
   expiresAt: string | null;
   liftedAt: string | null;
   createdAt: string;
+}
+
+export interface SavedSearchResponse {
+  id: string;
+  userId: string;
+  label: string | null;
+  type: 'short_let' | 'long_term' | 'commercial' | null;
+  neighborhood: string | null;
+  bedrooms: number | null;
+  minPriceKobo: string | null;
+  maxPriceKobo: string | null;
+  lastAlertedAt: string | null;
+  createdAt: string;
+}
+
+export interface SubscriptionResponse {
+  id: string;
+  userId: string;
+  plan: 'agent_crm_basic' | 'agent_crm_pro';
+  status: 'active' | 'past_due' | 'cancelled' | 'expired';
+  amountKobo: string;
+  currentPeriodEnd: string;
+  providerRef: string | null;
+  createdAt: string;
+  updatedAt: string;
+  cancelledAt: string | null;
 }
 
 export interface AgentDashboardResponse {

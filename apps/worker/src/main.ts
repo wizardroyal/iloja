@@ -5,6 +5,7 @@ import { handleChainAnchor } from './processors/chain-anchor';
 import { handleEscrowTimer } from './processors/escrow-timers';
 import { handleInspectionReminder } from './processors/inspection-reminders';
 import { handleNotificationDispatch } from './processors/notifications';
+import { handleSavedSearchAlerts } from './processors/saved-search-alerts';
 import { QUEUES, type QueueName } from './queues';
 
 const log = pino({ name: 'iloja-worker' });
@@ -22,6 +23,7 @@ const processors: Record<QueueName, (jobName: string, data: unknown) => Promise<
   [QUEUES.LISTING_REVERIFICATION]: async (jobName, data) => {
     log.info({ jobName, data }, 'listing re-verification (stub — Phase 2)');
   },
+  [QUEUES.SAVED_SEARCH_ALERTS]: handleSavedSearchAlerts,
 };
 
 /** Recurring jobs scheduled at boot. BullMQ dedupes by jobId across restarts. */
@@ -42,6 +44,21 @@ async function registerRepeatingJobs(connection: IORedis): Promise<Queue[]> {
   );
   queues.push(anchorQueue);
   log.info('registered hourly chain.anchor.batch');
+
+  // Hourly saved-search alerts — fans out new-listing notifications.
+  const alertsQueue = new Queue(QUEUES.SAVED_SEARCH_ALERTS, { connection });
+  await alertsQueue.add(
+    'saved_searches.run_alerts',
+    {},
+    {
+      repeat: { every: 60 * 60 * 1000 },
+      jobId: 'saved_searches.run_alerts.repeat',
+      removeOnComplete: 50,
+      removeOnFail: 100,
+    },
+  );
+  queues.push(alertsQueue);
+  log.info('registered hourly saved_searches.run_alerts');
   return queues;
 }
 

@@ -584,3 +584,63 @@ model AuditLog {
   @@index([entity, entityId, createdAt])
   @@index([actorUserId, createdAt])
 }
+
+// ───────────────────────── Phase 2: saved searches ─────────────────────────
+
+/// Renter-defined search criteria. Phase-2 push alerts fire when a listing
+/// activates that matches an existing row (doc §2.2: "new listing push alerts
+/// for saved searches"; doc §4.1: "first-access listing alerts").
+model SavedSearch {
+  id            String       @id @default(cuid())
+  userId        String
+  /// Optional friendly label for the inbox (e.g. "Yaba 2-bed").
+  label         String?
+  type          ListingType?
+  neighborhood  String?
+  bedrooms      Int?
+  minPriceKobo  BigInt?
+  maxPriceKobo  BigInt?
+  /// High-water mark — listings with a verifiedAt past this point haven't
+  /// alerted yet. Updated each time the alert worker fires.
+  lastAlertedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([type, neighborhood])
+}
+
+// ───────────────────────── Phase 2: subscriptions (agent CRM) ─────────────────────────
+
+enum SubscriptionPlan {
+  agent_crm_basic
+  agent_crm_pro
+}
+
+enum SubscriptionStatus {
+  active
+  past_due
+  cancelled
+  expired
+}
+
+/// Agent CRM subscription (doc §3.2 + §6 Tier 2). ₦15-25K/mo via Paystack
+/// subscriptions; the Iloja-side row is the source of truth, the provider
+/// reference comes from Paystack.
+model Subscription {
+  id           String             @id @default(cuid())
+  userId       String
+  plan         SubscriptionPlan
+  status       SubscriptionStatus @default(active)
+  /// Paystack subscription code or equivalent. Null when null-payments stub.
+  providerRef  String?
+  amountKobo   BigInt
+  /// Active iff currentPeriodEnd > now AND status = active.
+  currentPeriodEnd DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  cancelledAt DateTime?
+
+  @@index([userId, status])
+}

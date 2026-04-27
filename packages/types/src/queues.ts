@@ -8,6 +8,7 @@ export const QUEUES = {
   NOTIFICATIONS: 'notifications',
   INSPECTION_REMINDERS: 'inspection.reminders',
   LISTING_REVERIFICATION: 'listing.reverification',
+  SAVED_SEARCH_ALERTS: 'saved_searches.alerts',
 } as const;
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];

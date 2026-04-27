@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AgentsModule } from './agents/agents.module';
+import { AgreementsModule } from './agreements/agreements.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { BenchmarkModule } from './benchmark/benchmark.module';
@@ -18,6 +19,8 @@ import { OffersModule } from './offers/offers.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProvidersModule } from './providers/providers.module';
 import { QueueModule } from './queue/queue.module';
+import { SavedSearchesModule } from './saved-searches/saved-searches.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { VerificationModule } from './verification/verification.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
@@ -44,6 +47,9 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     EscrowModule,
     FlagsModule,
     ModerationModule,
+    SavedSearchesModule,
+    AgreementsModule,
+    SubscriptionsModule,
     WebhooksModule,
   ],
   controllers: [HealthController],

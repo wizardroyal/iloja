@@ -1,6 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import type { AgentProfile, Inspection, Listing, Review, Thread, User } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+
+/** Per the doc §2.5: "First 20 per zone". Permanent, non-removable. */
+const FOUNDING_AGENT_CAP_PER_ZONE = 20;
 
 export interface AgentProfilePayload {
   user: Pick<User, 'id' | 'fullName' | 'createdAt'>;
@@ -44,7 +53,56 @@ export interface AgentDashboardPayload {
 
 @Injectable()
 export class AgentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(AgentsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
+
+  /**
+   * Award the Founding Agent badge for a zone. Enforces the doc-mandated
+   * cap of 20 per zone — once filled, the badge is unavailable in that
+   * zone permanently. Idempotent: re-awarding to an already-founding
+   * agent in the same zone is a no-op.
+   */
+  async awardFoundingAgent(
+    targetUserId: string,
+    zone: string,
+    actorUserId: string,
+  ): Promise<AgentProfile> {
+    if (!zone || zone.length < 2) throw new BadRequestException('zone is required');
+    return this.prisma.$transaction(async (tx) => {
+      const profile = await tx.agentProfile.findUnique({ where: { userId: targetUserId } });
+      if (!profile) throw new NotFoundException(`Agent ${targetUserId} has no profile`);
+      if (profile.isFoundingAgent && profile.zone === zone) return profile;
+      if (profile.isFoundingAgent && profile.zone !== zone) {
+        throw new BadRequestException(`agent already founding in zone "${profile.zone}"`);
+      }
+      const founders = await tx.agentProfile.count({
+        where: { isFoundingAgent: true, zone },
+      });
+      if (founders >= FOUNDING_AGENT_CAP_PER_ZONE) {
+        throw new BadRequestException(
+          `zone "${zone}" already has ${FOUNDING_AGENT_CAP_PER_ZONE} founding agents`,
+        );
+      }
+      const updated = await tx.agentProfile.update({
+        where: { userId: targetUserId },
+        data: { isFoundingAgent: true, zone },
+      });
+      await this.audit.record({
+        actorUserId,
+        entity: 'agent_profile',
+        entityId: targetUserId,
+        action: 'award_founding_agent',
+        metadata: { zone, foundersAfter: founders + 1 },
+        tx,
+      });
+      this.logger.log(`Founding Agent awarded: ${targetUserId} in ${zone}`);
+      return updated;
+    });
+  }
 
   /**
    * Builds the agent dashboard (port of screen 06): score, leads, upcoming

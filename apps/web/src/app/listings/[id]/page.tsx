@@ -2,6 +2,7 @@ import type { BenchmarkResponse, ListingResponse } from '@iloja/sdk';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { FlagListing } from '@/components/flag-listing';
 import { MobileFrame } from '@/components/mobile-frame';
 import { VerifiedRecord } from '@/components/verified-record';
 import { WhatsAppShare } from '@/components/whatsapp-share';
@@ -301,7 +302,7 @@ function About({ listing }: { listing: ListingResponse }) {
 }
 
 function Amenities({ listing }: { listing: ListingResponse }) {
-  if (listing.amenities.length === 0) return null;
+  if (listing.amenities.length === 0) return <ReportFooter listingId={listing.id} />;
   return (
     <div className="px-5 mb-2">
       <div className="text-[10px] font-bold tracking-wider uppercase text-ink-subtle mb-2.5">
@@ -317,6 +318,15 @@ function Amenities({ listing }: { listing: ListingResponse }) {
           </span>
         ))}
       </div>
+      <ReportFooter listingId={listing.id} />
+    </div>
+  );
+}
+
+function ReportFooter({ listingId }: { listingId: string }) {
+  return (
+    <div className="px-0 pt-4 mt-2 border-t border-line text-center">
+      <FlagListing listingId={listingId} />
     </div>
   );
 }
