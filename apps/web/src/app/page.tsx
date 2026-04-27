@@ -1,7 +1,44 @@
 import { MobileFrame } from '@/components/mobile-frame';
 import { PropertyCard } from '@/components/property-card';
+import { getServerClient } from '@/lib/api';
+import {
+  formatNairaFromKobo,
+  sampleLongTerms,
+  sampleShortLets,
+} from '@/lib/sample-listings';
 
-export default function HomePage() {
+type FeedItem = {
+  id: string;
+  title: string;
+  priceKobo: string;
+  pricePeriod: 'night' | 'week' | 'month' | 'year';
+  neighborhood: string;
+  bedrooms: number;
+};
+
+async function loadFeed(type: 'short_let' | 'long_term'): Promise<FeedItem[]> {
+  try {
+    const client = getServerClient();
+    const listings = await client.listListings({ type });
+    if (listings.length > 0) {
+      return listings.map((l) => ({
+        id: l.id,
+        title: l.title,
+        priceKobo: l.priceKobo,
+        pricePeriod: l.pricePeriod,
+        neighborhood: l.neighborhood,
+        bedrooms: l.bedrooms,
+      }));
+    }
+  } catch {
+    // API unreachable during dev / before DB is seeded — fall through to mocks.
+  }
+  return type === 'short_let' ? sampleShortLets : sampleLongTerms;
+}
+
+export default async function HomePage() {
+  const [shortLets, longTerms] = await Promise.all([loadFeed('short_let'), loadFeed('long_term')]);
+
   return (
     <MobileFrame>
       <header className="px-5 pt-3 pb-0 flex items-center justify-between flex-shrink-0">
@@ -46,12 +83,7 @@ export default function HomePage() {
           </div>
           <span className="w-[34px] h-[34px] bg-forest rounded-[10px] flex items-center justify-center">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path
-                d="M2 4h12M4 8h8M6 12h4"
-                stroke="white"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
+              <path d="M2 4h12M4 8h8M6 12h4" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           </span>
         </button>
@@ -103,42 +135,21 @@ export default function HomePage() {
         </div>
 
         <div className="px-5 flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <PropertyCard
-            title="Studio serviced apartment, fully furnished"
-            price="₦55,000"
-            pricePeriod="/night"
-            location="Lekki Phase 1"
-            bedrooms={1}
-            agentInitial="O"
-            agentScore={4.9}
-            agentTier="gold"
-            listingType="short-let"
-            verified
-          />
-          <PropertyCard
-            title="Modern 2-bed short-let, pool access"
-            price="₦38,000"
-            pricePeriod="/night"
-            location="Ikeja GRA"
-            bedrooms={2}
-            agentInitial="T"
-            agentScore={4.7}
-            agentTier="gold"
-            listingType="short-let"
-            verified
-          />
-          <PropertyCard
-            title="Luxury penthouse, panoramic views"
-            price="₦75,000"
-            pricePeriod="/night"
-            location="Victoria Island"
-            bedrooms={3}
-            agentInitial="F"
-            agentScore={4.8}
-            agentTier="diamond"
-            listingType="short-let"
-            verified
-          />
+          {shortLets.map((listing) => (
+            <PropertyCard
+              key={listing.id}
+              title={listing.title}
+              price={formatNairaFromKobo(listing.priceKobo)}
+              pricePeriod={`/${listing.pricePeriod}`}
+              location={listing.neighborhood}
+              bedrooms={listing.bedrooms}
+              agentInitial="O"
+              agentScore={4.8}
+              agentTier="gold"
+              listingType="short-let"
+              verified
+            />
+          ))}
         </div>
 
         <div className="flex items-center justify-between px-5 mt-5 mb-3">
@@ -147,13 +158,9 @@ export default function HomePage() {
         </div>
 
         <div className="px-5 flex flex-col gap-2.5">
-          {[
-            { title: '2-bedroom apartment · self-contained', price: '₦850,000', loc: 'Yaba', agent: 'Kemi Adeyemi', initial: 'K', score: 4.8, tier: 'gold' as const },
-            { title: '3-bedroom flat, en-suite master', price: '₦1,200,000', loc: 'Surulere', agent: 'Biodun Lawal', initial: 'B', score: 4.9, tier: 'blue' as const },
-            { title: '1-bedroom self-con, generator included', price: '₦600,000', loc: 'Ikeja', agent: 'Emeka Obi', initial: 'E', score: 4.6, tier: 'silver' as const },
-          ].map((p) => (
+          {longTerms.map((listing) => (
             <article
-              key={p.title}
+              key={listing.id}
               className="bg-white rounded-2xl overflow-hidden shadow-card border border-line flex"
             >
               <div className="w-[100px] flex-shrink-0 relative bg-gradient-to-br from-grove to-forest">
@@ -163,23 +170,16 @@ export default function HomePage() {
               </div>
               <div className="flex-1 px-3 py-2.5">
                 <div className="font-display text-[15px] font-medium text-forest mb-0.5">
-                  {p.price}{' '}
-                  <span className="text-[10px] font-light text-ink-subtle">/yr</span>
+                  {formatNairaFromKobo(listing.priceKobo)}{' '}
+                  <span className="text-[10px] font-light text-ink-subtle">
+                    /{listing.pricePeriod}
+                  </span>
                 </div>
-                <div className="text-xs font-medium text-ink mb-1">{p.title}</div>
+                <div className="text-xs font-medium text-ink mb-1">{listing.title}</div>
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[10px] text-ink-subtle">📍 {p.loc}</span>
+                  <span className="text-[10px] text-ink-subtle">📍 {listing.neighborhood}</span>
                   <span className="text-[9.5px] font-semibold bg-success-tint text-grove px-1.5 py-0.5 rounded">
                     ✓ Verified
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 mt-1.5">
-                  <span className="w-[18px] h-[18px] rounded-full bg-grove flex items-center justify-center text-[7px] font-bold text-white">
-                    {p.initial}
-                  </span>
-                  <span className="text-[10px] text-ink-muted">{p.agent}</span>
-                  <span className="text-[10px] font-semibold text-grove bg-success-tint px-1.5 py-0.5 rounded">
-                    {p.score.toFixed(1)}★
                   </span>
                 </div>
               </div>
@@ -190,10 +190,10 @@ export default function HomePage() {
 
       <nav className="bg-white border-t border-line px-0 pt-2.5 pb-5 flex justify-around items-center flex-shrink-0">
         {[
-          { label: 'Home', active: true },
-          { label: 'Saved', active: false },
-          { label: 'Inspections', active: false },
-          { label: 'Profile', active: false },
+          { label: 'Home', active: true, href: '/' },
+          { label: 'Saved', active: false, href: '/saved' },
+          { label: 'Inspections', active: false, href: '/inspections' },
+          { label: 'Profile', active: false, href: '/profile' },
         ].map((item) => (
           <button key={item.label} className="flex flex-col items-center gap-1 flex-1">
             <span

@@ -4,6 +4,7 @@ import { HealthController } from './health/health.controller';
 import { ListingsModule } from './listings/listings.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProvidersModule } from './providers/providers.module';
+import { VerificationModule } from './verification/verification.module';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { ProvidersModule } from './providers/providers.module';
     PrismaModule,
     ProvidersModule,
     ListingsModule,
+    VerificationModule,
   ],
   controllers: [HealthController],
 })

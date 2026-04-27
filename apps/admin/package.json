@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@iloja/sdk": "workspace:*",
     "@iloja/types": "workspace:*",
     "@iloja/ui": "workspace:*",
     "next": "14.2.15",
