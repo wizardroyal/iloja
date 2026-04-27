@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { ReactNode } from 'react';
 
 export type AgentBadgeTier = 'new' | 'blue' | 'silver' | 'gold' | 'diamond';
@@ -15,6 +16,8 @@ export interface PropertyCardProps {
   listingType: ListingType;
   verified: boolean;
   thumbnail?: ReactNode;
+  /** When set, the whole card links here. */
+  href?: string;
 }
 
 const tierBgClass: Record<AgentBadgeTier, string> = {
@@ -25,7 +28,20 @@ const tierBgClass: Record<AgentBadgeTier, string> = {
   diamond: 'bg-premium',
 };
 
-export function PropertyCard({
+export function PropertyCard(props: PropertyCardProps) {
+  const className =
+    'bg-white rounded-[18px] overflow-hidden shadow-card border border-line w-[220px] flex-shrink-0 block';
+  const inner = <PropertyCardInner {...props} />;
+  return props.href ? (
+    <Link href={props.href} className={className}>
+      {inner}
+    </Link>
+  ) : (
+    <article className={className}>{inner}</article>
+  );
+}
+
+function PropertyCardInner({
   title,
   price,
   pricePeriod,
@@ -39,7 +55,7 @@ export function PropertyCard({
   thumbnail,
 }: PropertyCardProps) {
   return (
-    <article className="bg-white rounded-[18px] overflow-hidden shadow-card border border-line w-[220px] flex-shrink-0">
+    <>
       <div className="h-[130px] relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-grove to-forest">{thumbnail}</div>
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-forest/60" />
@@ -55,7 +71,7 @@ export function PropertyCard({
           </span>
         </div>
 
-        <button
+        <span
           aria-label="Save listing"
           className="absolute top-2.5 right-2.5 w-7 h-7 bg-white/90 rounded-full flex items-center justify-center"
         >
@@ -67,7 +83,7 @@ export function PropertyCard({
               fill="none"
             />
           </svg>
-        </button>
+        </span>
 
         <div className="absolute bottom-2 left-2.5 right-2.5 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
@@ -98,6 +114,6 @@ export function PropertyCard({
           </span>
         </div>
       </div>
-    </article>
+    </>
   );
 }

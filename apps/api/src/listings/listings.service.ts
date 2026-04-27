@@ -63,13 +63,22 @@ export class ListingsService {
   async findActive(params: {
     type?: 'short_let' | 'long_term' | 'commercial';
     neighborhood?: string;
+    bedrooms?: number;
+    minPriceKobo?: bigint;
+    maxPriceKobo?: bigint;
     take?: number;
   }): Promise<Listing[]> {
+    const priceFilter: Prisma.ListingWhereInput['priceKobo'] = {};
+    if (params.minPriceKobo !== undefined) priceFilter.gte = params.minPriceKobo;
+    if (params.maxPriceKobo !== undefined) priceFilter.lte = params.maxPriceKobo;
+
     return this.prisma.listing.findMany({
       where: {
         status: 'active',
         ...(params.type ? { type: params.type } : {}),
         ...(params.neighborhood ? { neighborhood: params.neighborhood } : {}),
+        ...(params.bedrooms !== undefined ? { bedrooms: params.bedrooms } : {}),
+        ...(Object.keys(priceFilter).length > 0 ? { priceKobo: priceFilter } : {}),
       },
       orderBy: { verifiedAt: 'desc' },
       take: params.take ?? 20,

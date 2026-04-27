@@ -68,13 +68,37 @@ export class IlojaClient {
     params: {
       type?: 'short_let' | 'long_term' | 'commercial';
       neighborhood?: string;
+      bedrooms?: number;
+      minPriceKobo?: string;
+      maxPriceKobo?: string;
     } = {},
   ): Promise<ListingResponse[]> {
     const qs = new URLSearchParams();
     if (params.type) qs.set('type', params.type);
     if (params.neighborhood) qs.set('neighborhood', params.neighborhood);
+    if (params.bedrooms !== undefined) qs.set('bedrooms', String(params.bedrooms));
+    if (params.minPriceKobo) qs.set('minPriceKobo', params.minPriceKobo);
+    if (params.maxPriceKobo) qs.set('maxPriceKobo', params.maxPriceKobo);
     const suffix = qs.toString();
     return this.request('GET', `/listings${suffix ? `?${suffix}` : ''}`);
+  }
+
+  // ───── Agents ─────
+
+  async getAgent(id: string): Promise<AgentProfileResponse> {
+    return this.request('GET', `/agents/${id}`);
+  }
+
+  // ───── Benchmark ─────
+
+  async benchmark(params: {
+    type: 'short_let' | 'long_term' | 'commercial';
+    neighborhood: string;
+    bedrooms?: number;
+  }): Promise<BenchmarkResponse> {
+    const qs = new URLSearchParams({ type: params.type, neighborhood: params.neighborhood });
+    if (params.bedrooms !== undefined) qs.set('bedrooms', String(params.bedrooms));
+    return this.request('GET', `/benchmark?${qs.toString()}`);
   }
 
   async getListing(id: string): Promise<ListingResponse> {
@@ -233,6 +257,43 @@ export interface SubmitVerificationInput {
     lat: number | null;
     lng: number | null;
   }[];
+}
+
+export interface AgentProfileResponse {
+  user: { id: string; fullName: string; createdAt: string };
+  profile: {
+    userId: string;
+    badgeTier: 'new' | 'blue' | 'silver' | 'gold' | 'diamond';
+    credibilityScore: number;
+    completedRentals: number;
+    isFoundingAgent: boolean;
+    zone: string | null;
+  } | null;
+  listings: ListingResponse[];
+  reviews: {
+    id: string;
+    subjectUserId: string;
+    byUserId: string;
+    listingId: string | null;
+    rating: number;
+    body: string;
+    createdAt: string;
+  }[];
+  stats: {
+    activeListings: number;
+    averageRating: number | null;
+    reviewCount: number;
+  };
+}
+
+export interface BenchmarkResponse {
+  type: 'short_let' | 'long_term' | 'commercial';
+  neighborhood: string;
+  bedrooms: number | null;
+  sampleSize: number;
+  p25Kobo: string | null;
+  medianKobo: string | null;
+  p75Kobo: string | null;
 }
 
 export interface VerificationJobResponse {

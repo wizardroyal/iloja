@@ -88,6 +88,23 @@ model OtpChallenge {
   @@index([phone, createdAt])
 }
 
+/// Renter-on-agent / agent-on-renter review tied to a specific listing.
+/// Feeds the credibility score and shows on agent profile pages.
+model Review {
+  id            String   @id @default(cuid())
+  /// User being reviewed (the agent or the renter).
+  subjectUserId String
+  /// User leaving the review.
+  byUserId      String
+  listingId     String?
+  /// 1.0 - 5.0 in 0.5 steps; enforced at API boundary, not DB.
+  rating        Float
+  body          String   @db.Text
+  createdAt     DateTime @default(now())
+
+  @@index([subjectUserId, createdAt])
+}
+
 // ───────────────────────── Listings ─────────────────────────
 
 enum ListingType {

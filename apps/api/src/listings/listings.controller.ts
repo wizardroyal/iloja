@@ -36,8 +36,17 @@ export class ListingsController {
   list(
     @Query('type') type?: 'short_let' | 'long_term' | 'commercial',
     @Query('neighborhood') neighborhood?: string,
+    @Query('bedrooms') bedrooms?: string,
+    @Query('minPriceKobo') minPriceKobo?: string,
+    @Query('maxPriceKobo') maxPriceKobo?: string,
   ): Promise<Listing[]> {
-    return this.listings.findActive({ type, neighborhood });
+    return this.listings.findActive({
+      type,
+      neighborhood,
+      bedrooms: bedrooms ? Number(bedrooms) : undefined,
+      minPriceKobo: minPriceKobo ? BigInt(minPriceKobo) : undefined,
+      maxPriceKobo: maxPriceKobo ? BigInt(maxPriceKobo) : undefined,
+    });
   }
 
   @Get('mine')
