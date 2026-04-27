@@ -38,6 +38,6 @@ export class FlagsController {
     @Body() body: ResolveFlagDto,
   ): Promise<ListingFlag> {
     assertHasRole(user, 'admin');
-    return this.flags.resolve(id, body.valid, body.decisionNotes);
+    return this.flags.resolve(id, body.valid, body.decisionNotes, user.id);
   }
 }

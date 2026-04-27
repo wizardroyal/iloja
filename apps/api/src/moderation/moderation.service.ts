@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { UserRestriction, UserRestrictionKind } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -23,6 +24,7 @@ export class ModerationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly audit: AuditService,
   ) {}
 
   async restrict(input: {
@@ -56,6 +58,18 @@ export class ModerationService {
       body: input.reason,
     });
 
+    await this.audit.record({
+      actorUserId: input.issuedById,
+      entity: 'user_restriction',
+      entityId: restriction.id,
+      action: 'restrict_user',
+      metadata: {
+        targetUserId: input.userId,
+        kind: input.kind,
+        expiresAt: input.expiresAt ?? null,
+      },
+    });
+
     this.logger.warn(`User ${input.userId} restricted: ${input.kind}`);
     return restriction;
   }
@@ -64,11 +78,19 @@ export class ModerationService {
     const r = await this.prisma.userRestriction.findUnique({ where: { id: restrictionId } });
     if (!r) throw new NotFoundException(`Restriction ${restrictionId} not found`);
     if (r.liftedAt) throw new BadRequestException('already lifted');
-    this.logger.log(`Restriction ${restrictionId} lifted by ${issuedById}`);
-    return this.prisma.userRestriction.update({
+    const lifted = await this.prisma.userRestriction.update({
       where: { id: restrictionId },
       data: { liftedAt: new Date() },
     });
+    await this.audit.record({
+      actorUserId: issuedById,
+      entity: 'user_restriction',
+      entityId: restrictionId,
+      action: 'lift_restriction',
+      metadata: { targetUserId: r.userId, kind: r.kind },
+    });
+    this.logger.log(`Restriction ${restrictionId} lifted by ${issuedById}`);
+    return lifted;
   }
 
   async listForUser(userId: string): Promise<UserRestriction[]> {

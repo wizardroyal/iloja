@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { ListingFlag } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 import { CredibilityService } from '../credibility/credibility.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -22,6 +23,7 @@ export class FlagsService {
     private readonly prisma: PrismaService,
     private readonly credibility: CredibilityService,
     private readonly notifications: NotificationsService,
+    private readonly audit: AuditService,
   ) {}
 
   async create(
@@ -52,6 +54,7 @@ export class FlagsService {
     flagId: string,
     valid: boolean,
     decisionNotes: string,
+    actorUserId: string,
   ): Promise<ListingFlag> {
     const result = await this.prisma.$transaction(async (tx) => {
       const flag = await tx.listingFlag.findUnique({ where: { id: flagId } });
@@ -93,6 +96,15 @@ export class FlagsService {
           tx,
         });
       }
+
+      await this.audit.record({
+        actorUserId,
+        entity: 'listing_flag',
+        entityId: flagId,
+        action: 'resolve_flag',
+        metadata: { listingId: listing.id, valid, status },
+        tx,
+      });
 
       return { flag: updated, ownerId: listing.ownerId, valid };
     });

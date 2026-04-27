@@ -558,3 +558,29 @@ model ListingFlag {
   @@index([listingId, status])
   @@index([status, createdAt])
 }
+
+// ───────────────────────── Audit log ─────────────────────────
+
+/// Append-only record of every admin mutation. Per cross-cutting concerns
+/// in plan.md §8 ("audit log for admin actions") and the NDPR-driven
+/// requirement to be able to answer "who changed what, when".
+model AuditLog {
+  id          String   @id @default(cuid())
+  /// Admin user who performed the action.
+  actorUserId String
+  /// Domain entity affected — e.g. listing, dispute, flag, restriction.
+  entity      String
+  entityId    String
+  /// Verb tag — e.g. "approve_verification", "decide_dispute", "ban_user".
+  action      String
+  /// Sanitised JSON snapshot of relevant fields at the time of action.
+  /// Never includes PII (NIN, BVN, raw phone).
+  metadata    Json?
+  ipAddress   String?
+  userAgent   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId, createdAt])
+  @@index([actorUserId, createdAt])
+}

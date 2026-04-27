@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { Dispute, Prisma } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 import { CredibilityService } from '../credibility/credibility.service';
 import { DocumentsService } from '../documents/documents.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -29,6 +30,7 @@ export class DisputesService {
     private readonly prisma: PrismaService,
     private readonly credibility: CredibilityService,
     private readonly documents: DocumentsService,
+    private readonly audit: AuditService,
     @Inject(ESCROW_CUSTODIAN_PROVIDER) private readonly custodian: EscrowCustodianProvider,
   ) {}
 
@@ -53,6 +55,7 @@ export class DisputesService {
     id: string,
     inFavorOf: 'payer' | 'payee',
     decisionNotes: string,
+    actorUserId: string,
   ): Promise<Dispute> {
     const result = await this.prisma.$transaction(async (tx) => {
       const dispute = await tx.dispute.findUnique({
@@ -128,6 +131,20 @@ export class DisputesService {
           resolvedAt: resolvedAt.toISOString(),
         },
         contextRef: id,
+        tx,
+      });
+
+      await this.audit.record({
+        actorUserId,
+        entity: 'dispute',
+        entityId: id,
+        action: 'decide_dispute',
+        metadata: {
+          escrowId: dispute.escrow.id,
+          inFavorOf,
+          newDisputeStatus,
+          newEscrowState,
+        },
         tx,
       });
 

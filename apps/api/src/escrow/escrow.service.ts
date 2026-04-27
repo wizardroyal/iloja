@@ -288,6 +288,29 @@ export class EscrowService {
       return updated;
     });
     await this.credibility.refreshAgentSnapshot(result.payeeId);
+
+    // Score-at-time-of-deal snapshot anchored on-chain so the agent's
+    // standing at this transaction is independently verifiable forever
+    // ("agents and renters cannot be retroactively penalised" — doc §2.10).
+    // Lives outside the transaction so the snapshot reflects the post-
+    // refresh score and credibility row.
+    const profile = await this.prisma.agentProfile.findUnique({
+      where: { userId: result.payeeId },
+    });
+    if (profile) {
+      await this.documents.writeReceipt({
+        type: 'credibility_snapshot',
+        body: {
+          userId: result.payeeId,
+          escrowId: result.id,
+          credibilityScore: profile.credibilityScore,
+          badgeTier: profile.badgeTier,
+          completedRentals: profile.completedRentals,
+          snapshotAt: new Date().toISOString(),
+        },
+        contextRef: result.id,
+      });
+    }
     return result;
   }
 

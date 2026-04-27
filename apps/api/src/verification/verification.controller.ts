@@ -77,7 +77,7 @@ export class VerificationController {
     @CurrentUserParam() user: CurrentUser,
   ): Promise<VerificationJob> {
     assertHasRole(user, 'admin');
-    return this.verification.approve(id);
+    return this.verification.approve(id, user.id);
   }
 
   @Post(':id/reject')
@@ -89,6 +89,6 @@ export class VerificationController {
     @Body() body: RejectVerificationDto,
   ): Promise<VerificationJob> {
     assertHasRole(user, 'admin');
-    return this.verification.reject(id, body.reason);
+    return this.verification.reject(id, body.reason, user.id);
   }
 }

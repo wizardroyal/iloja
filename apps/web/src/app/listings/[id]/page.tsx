@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { MobileFrame } from '@/components/mobile-frame';
 import { VerifiedRecord } from '@/components/verified-record';
+import { WhatsAppShare } from '@/components/whatsapp-share';
 import { getServerClient } from '@/lib/api';
 import { formatNairaFromKobo } from '@/lib/sample-listings';
 
@@ -160,11 +161,14 @@ function Hero({ listing }: { listing: ListingResponse }) {
 function PriceBlock({ listing }: { listing: ListingResponse }) {
   return (
     <div className="px-5 pt-5">
-      <div className="flex items-baseline gap-1.5 mb-1">
-        <span className="font-display text-[28px] font-medium text-forest">
-          {formatNairaFromKobo(listing.priceKobo)}
-        </span>
-        <span className="text-[13px] text-ink-subtle font-light">/ {listing.pricePeriod}</span>
+      <div className="flex items-baseline justify-between gap-2 mb-1">
+        <div className="flex items-baseline gap-1.5">
+          <span className="font-display text-[28px] font-medium text-forest">
+            {formatNairaFromKobo(listing.priceKobo)}
+          </span>
+          <span className="text-[13px] text-ink-subtle font-light">/ {listing.pricePeriod}</span>
+        </div>
+        <WhatsAppShare listingId={listing.id} title={listing.title} />
       </div>
       <h1 className="font-display text-xl text-ink leading-tight tracking-tight mb-2.5">
         {listing.title}

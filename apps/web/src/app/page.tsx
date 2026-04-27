@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { InboxBell } from '@/components/inbox-bell';
 import { MobileFrame } from '@/components/mobile-frame';
 import { PropertyCard } from '@/components/property-card';
 import { getServerClient } from '@/lib/api';
@@ -78,6 +79,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
           >
             + List
           </Link>
+          <InboxBell />
           <Link
             href="/login"
             className="w-[38px] h-[38px] rounded-full bg-gradient-to-br from-grove to-forest flex items-center justify-center text-sm font-semibold text-white shadow-card"

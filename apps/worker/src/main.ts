@@ -3,6 +3,7 @@ import IORedis from 'ioredis';
 import pino from 'pino';
 import { handleChainAnchor } from './processors/chain-anchor';
 import { handleEscrowTimer } from './processors/escrow-timers';
+import { handleInspectionReminder } from './processors/inspection-reminders';
 import { handleNotificationDispatch } from './processors/notifications';
 import { QUEUES, type QueueName } from './queues';
 
@@ -17,9 +18,7 @@ const processors: Record<QueueName, (jobName: string, data: unknown) => Promise<
   [QUEUES.ESCROW_TIMERS]: handleEscrowTimer,
   [QUEUES.CHAIN_ANCHOR]: handleChainAnchor,
   [QUEUES.NOTIFICATIONS]: handleNotificationDispatch,
-  [QUEUES.INSPECTION_REMINDERS]: async (jobName, data) => {
-    log.info({ jobName, data }, 'inspection reminder (stub — Sprint 6 fan-out)');
-  },
+  [QUEUES.INSPECTION_REMINDERS]: handleInspectionReminder,
   [QUEUES.LISTING_REVERIFICATION]: async (jobName, data) => {
     log.info({ jobName, data }, 'listing re-verification (stub — Phase 2)');
   },

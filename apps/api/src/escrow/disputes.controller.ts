@@ -35,6 +35,6 @@ export class DisputesController {
     @Body() body: DisputeDecisionDto,
   ): Promise<Dispute> {
     assertHasRole(user, 'admin');
-    return this.disputes.decide(id, body.inFavorOf, body.decisionNotes);
+    return this.disputes.decide(id, body.inFavorOf, body.decisionNotes, user.id);
   }
 }

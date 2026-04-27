@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AgentsModule } from './agents/agents.module';
+import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { BenchmarkModule } from './benchmark/benchmark.module';
 import { ChatModule } from './chat/chat.module';
@@ -27,6 +28,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     PrismaModule,
     QueueModule,
     ProvidersModule,
+    AuditModule,
     NotificationsModule,
     CredibilityModule,
     DocumentsModule,

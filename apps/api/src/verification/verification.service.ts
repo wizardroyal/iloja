@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { VerificationJob } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 import { haversineMetres } from '../common/geo';
 import { CredibilityService } from '../credibility/credibility.service';
 import { DocumentsService } from '../documents/documents.service';
@@ -23,6 +24,7 @@ export class VerificationService {
     private readonly prisma: PrismaService,
     private readonly credibility: CredibilityService,
     private readonly documents: DocumentsService,
+    private readonly audit: AuditService,
   ) {}
 
   async listUnclaimed(): Promise<VerificationJob[]> {
@@ -114,7 +116,7 @@ export class VerificationService {
     });
   }
 
-  async approve(jobId: string): Promise<VerificationJob> {
+  async approve(jobId: string, actorUserId: string): Promise<VerificationJob> {
     const result = await this.prisma.$transaction(async (tx) => {
       const job = await tx.verificationJob.findUnique({
         where: { id: jobId },
@@ -162,13 +164,22 @@ export class VerificationService {
         tx,
       });
 
+      await this.audit.record({
+        actorUserId,
+        entity: 'verification_job',
+        entityId: jobId,
+        action: 'approve_verification',
+        metadata: { listingId: job.listingId, ownerId: job.listing.ownerId },
+        tx,
+      });
+
       return { updated, ownerId: job.listing.ownerId };
     });
     await this.credibility.refreshAgentSnapshot(result.ownerId);
     return result.updated;
   }
 
-  async reject(jobId: string, reason: string): Promise<VerificationJob> {
+  async reject(jobId: string, reason: string, actorUserId: string): Promise<VerificationJob> {
     return this.prisma.$transaction(async (tx) => {
       const job = await tx.verificationJob.findUnique({ where: { id: jobId } });
       if (!job) throw new NotFoundException(`Verification job ${jobId} not found`);
@@ -180,10 +191,19 @@ export class VerificationService {
         where: { id: job.listingId },
         data: { status: 'rejected' },
       });
-      return tx.verificationJob.update({
+      const updated = await tx.verificationJob.update({
         where: { id: jobId },
         data: { status: 'rejected', decidedAt: now, decisionReason: reason },
       });
+      await this.audit.record({
+        actorUserId,
+        entity: 'verification_job',
+        entityId: jobId,
+        action: 'reject_verification',
+        metadata: { listingId: job.listingId, reason },
+        tx,
+      });
+      return updated;
     });
   }
 }
