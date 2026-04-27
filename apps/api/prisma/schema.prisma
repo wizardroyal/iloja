@@ -1,0 +1,320 @@
+// Iloja — Postgres schema v1.
+// Mirrors the domain types in packages/types/src/*. Prisma owns the migrations;
+// Zod owns the runtime validation. Drift between them is a bug.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────── Users & roles ─────────────────────────
+
+enum UserRole {
+  renter
+  agent
+  landlord
+  operator
+  admin
+}
+
+enum KycStatus {
+  unverified
+  pending
+  verified
+  rejected
+}
+
+enum AgentBadgeTier {
+  new_tier      @map("new")
+  blue
+  silver
+  gold
+  diamond
+}
+
+model User {
+  id        String     @id @default(cuid())
+  phone     String     @unique
+  email     String?    @unique
+  fullName  String
+  roles     UserRole[]
+  kycStatus KycStatus  @default(unverified)
+  // Encrypted — never returned by API. NIN/BVN are PII.
+  ninCipher String?
+  bvnCipher String?
+
+  agentProfile AgentProfile?
+  listings     Listing[]
+  credibility  CredibilityEvent[] @relation("CredibilitySubject")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AgentProfile {
+  userId            String         @id
+  badgeTier         AgentBadgeTier @default(new_tier)
+  credibilityScore  Float          @default(0)
+  completedRentals  Int            @default(0)
+  isFoundingAgent   Boolean        @default(false)
+  zone              String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  updatedAt DateTime @updatedAt
+}
+
+// ───────────────────────── Listings ─────────────────────────
+
+enum ListingType {
+  short_let
+  long_term
+  commercial
+}
+
+enum ListingStatus {
+  draft
+  pending_verification
+  active
+  paused
+  archived
+  rejected
+}
+
+enum PricePeriod {
+  night
+  week
+  month
+  year
+}
+
+model Listing {
+  id            String        @id @default(cuid())
+  ownerId       String
+  type          ListingType
+  status        ListingStatus @default(draft)
+  title         String
+  description   String        @db.Text
+  bedrooms      Int
+  bathrooms     Int
+  // Stored as kobo (1 NGN = 100 kobo) to avoid float drift.
+  priceKobo     BigInt
+  pricePeriod   PricePeriod
+  neighborhood  String
+  address       String
+  // Geocoded WGS84 coordinates of the address.
+  lat           Float
+  lng           Float
+  amenities     String[]
+  verifiedAt    DateTime?
+
+  owner             User                @relation(fields: [ownerId], references: [id])
+  photos            ListingPhoto[]
+  verificationJobs  VerificationJob[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, neighborhood])
+  @@index([type, neighborhood, priceKobo])
+}
+
+model ListingPhoto {
+  id        String  @id @default(cuid())
+  listingId String
+  url       String
+  position  Int
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, position])
+}
+
+// ───────────────────────── Verification ─────────────────────────
+
+enum VerificationJobStatus {
+  unclaimed
+  claimed
+  submitted
+  approved
+  rejected
+}
+
+enum VerificationArtefactKind {
+  photo
+  video
+  floorplan
+}
+
+model VerificationJob {
+  id                String                @id @default(cuid())
+  listingId         String
+  status            VerificationJobStatus @default(unclaimed)
+  operatorId        String?
+  // Distance in metres between operator GPS and listing geocoded address.
+  gpsMismatchMetres Float?
+  decisionReason    String?
+
+  listing   Listing                 @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  artefacts VerificationArtefact[]
+
+  createdAt DateTime  @default(now())
+  decidedAt DateTime?
+
+  @@index([status, createdAt])
+}
+
+model VerificationArtefact {
+  id         String                   @id @default(cuid())
+  jobId      String
+  kind       VerificationArtefactKind
+  url        String
+  capturedAt DateTime
+  lat        Float?
+  lng        Float?
+
+  job VerificationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+// ───────────────────────── Credibility ─────────────────────────
+
+enum CredibilityFactor {
+  review_rating
+  inspection_show_up
+  verified_listing_ratio
+  response_time
+  completed_rental
+  listing_accuracy
+  account_history
+}
+
+model CredibilityEvent {
+  id            String            @id @default(cuid())
+  subjectUserId String
+  factor        CredibilityFactor
+  delta         Float
+  reason        String
+  contextRef    String?
+
+  subject User @relation("CredibilitySubject", fields: [subjectUserId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([subjectUserId, factor, createdAt])
+}
+
+// ───────────────────────── Escrow ─────────────────────────
+
+enum EscrowKind {
+  inspection_fee
+  short_let_booking
+  long_term_rent
+}
+
+enum EscrowState {
+  created
+  funded
+  released
+  refunded
+  disputed
+  expired
+}
+
+model Escrow {
+  id            String      @id @default(cuid())
+  kind          EscrowKind
+  state         EscrowState @default(created)
+  payerId       String
+  payeeId       String
+  listingId     String?
+  amountKobo    BigInt
+  feeKobo       BigInt
+  // Custodian's identifier (Anchor account/transfer ref). Null until funded.
+  custodianRef  String?
+  autoReleaseAt DateTime?
+
+  events    EscrowEvent[]
+  disputes  Dispute[]
+
+  createdAt  DateTime  @default(now())
+  fundedAt   DateTime?
+  resolvedAt DateTime?
+
+  @@index([state, autoReleaseAt])
+}
+
+/// Append-only audit trail. Every state transition writes a row. The current
+/// Escrow.state is a denormalisation of the latest event for query speed.
+model EscrowEvent {
+  id          String      @id @default(cuid())
+  escrowId    String
+  fromState   EscrowState
+  toState     EscrowState
+  reason      String?
+  actorUserId String?
+
+  escrow Escrow @relation(fields: [escrowId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([escrowId, createdAt])
+}
+
+enum DisputeStatus {
+  open
+  evidence
+  resolved_payer
+  resolved_payee
+}
+
+model Dispute {
+  id              String        @id @default(cuid())
+  escrowId        String
+  openedByUserId  String
+  status          DisputeStatus @default(open)
+  reason          String        @db.Text
+  evidenceUrls    String[]
+  decisionNotes   String?
+
+  escrow Escrow @relation(fields: [escrowId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+}
+
+// ───────────────────────── Documents (on-chain) ─────────────────────────
+
+enum DocumentType {
+  tenancy_agreement
+  inspection_report
+  escrow_receipt
+  dispute_outcome
+  credibility_snapshot
+}
+
+enum AnchorStatus {
+  pending
+  submitted
+  confirmed
+  failed
+}
+
+model Document {
+  id           String       @id @default(cuid())
+  type         DocumentType
+  hash         String       @unique
+  uri          String
+  contextRef   String
+  anchorStatus AnchorStatus @default(pending)
+  txHash       String?
+  blockNumber  Int?
+
+  createdAt   DateTime  @default(now())
+  anchoredAt  DateTime?
+
+  @@index([anchorStatus, createdAt])
+}
