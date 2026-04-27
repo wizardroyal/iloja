@@ -7,6 +7,8 @@ import {
 } from '@nestjs/common';
 import type { VerificationJob } from '@prisma/client';
 import { haversineMetres } from '../common/geo';
+import { CredibilityService } from '../credibility/credibility.service';
+import { DocumentsService } from '../documents/documents.service';
 import { PrismaService } from '../prisma/prisma.service';
 import type { SubmitVerificationDto } from './verification.dto';
 
@@ -17,7 +19,11 @@ const GPS_MISMATCH_THRESHOLD_M = 200;
 export class VerificationService {
   private readonly logger = new Logger(VerificationService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly credibility: CredibilityService,
+    private readonly documents: DocumentsService,
+  ) {}
 
   async listUnclaimed(): Promise<VerificationJob[]> {
     return this.prisma.verificationJob.findMany({
@@ -109,10 +115,10 @@ export class VerificationService {
   }
 
   async approve(jobId: string): Promise<VerificationJob> {
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const job = await tx.verificationJob.findUnique({
         where: { id: jobId },
-        include: { listing: true },
+        include: { listing: true, artefacts: true },
       });
       if (!job) throw new NotFoundException(`Verification job ${jobId} not found`);
       if (job.status !== 'submitted') {
@@ -123,11 +129,43 @@ export class VerificationService {
         where: { id: job.listingId },
         data: { status: 'active', verifiedAt: now },
       });
-      return tx.verificationJob.update({
+      const updated = await tx.verificationJob.update({
         where: { id: jobId },
         data: { status: 'approved', decidedAt: now, decisionReason: null },
       });
+
+      // Verified-listing credibility bump for the agent who owns the listing.
+      await this.credibility.record({
+        subjectUserId: job.listing.ownerId,
+        factor: 'verified_listing_ratio',
+        delta: 5.0,
+        reason: 'listing_verified',
+        contextRef: jobId,
+        tx,
+      });
+
+      // Inspection report becomes a Verified Record on-chain. ContextRef
+      // is the listing id so the property detail page can surface the
+      // record directly without an extra job lookup.
+      await this.documents.writeReceipt({
+        type: 'inspection_report',
+        body: {
+          jobId,
+          listingId: job.listingId,
+          ownerId: job.listing.ownerId,
+          operatorId: job.operatorId,
+          gpsMismatchMetres: job.gpsMismatchMetres,
+          artefactHashes: job.artefacts.map((a) => a.url),
+          decidedAt: now.toISOString(),
+        },
+        contextRef: job.listingId,
+        tx,
+      });
+
+      return { updated, ownerId: job.listing.ownerId };
     });
+    await this.credibility.refreshAgentSnapshot(result.ownerId);
+    return result.updated;
   }
 
   async reject(jobId: string, reason: string): Promise<VerificationJob> {

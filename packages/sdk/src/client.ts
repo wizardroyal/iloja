@@ -293,6 +293,16 @@ export class IlojaClient {
     return this.request('POST', `/disputes/${id}/decide`, input);
   }
 
+  // ───── Documents (Verified Records) ─────
+
+  async getDocumentByHash(hash: string): Promise<DocumentResponse> {
+    return this.request('GET', `/documents/${encodeURIComponent(hash)}`);
+  }
+
+  async listDocumentsByContext(contextRef: string): Promise<DocumentResponse[]> {
+    return this.request('GET', `/documents?contextRef=${encodeURIComponent(contextRef)}`);
+  }
+
   // ───── internals ─────
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -470,6 +480,24 @@ export interface EscrowResponse {
     createdAt: string;
   }[];
   disputes?: DisputeResponse[];
+}
+
+export interface DocumentResponse {
+  id: string;
+  type:
+    | 'tenancy_agreement'
+    | 'inspection_report'
+    | 'escrow_receipt'
+    | 'dispute_outcome'
+    | 'credibility_snapshot';
+  hash: string;
+  uri: string;
+  contextRef: string;
+  anchorStatus: 'pending' | 'submitted' | 'confirmed' | 'failed';
+  txHash: string | null;
+  blockNumber: number | null;
+  createdAt: string;
+  anchoredAt: string | null;
 }
 
 export interface DisputeResponse {

@@ -3,6 +3,7 @@
 import { ApiError, type EscrowResponse } from '@iloja/sdk';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { VerifiedRecord } from '@/components/verified-record';
 import { getBrowserClient } from '@/lib/browser-client';
 import { formatNairaFromKobo } from '@/lib/sample-listings';
 
@@ -450,9 +451,12 @@ function SuccessReceipt({ escrow }: { escrow: EscrowResponse }) {
         </svg>
       </div>
       <h2 className="font-display text-2xl text-forest mb-2">Released</h2>
-      <p className="text-sm text-ink-muted leading-relaxed mb-5">
+      <p className="text-sm text-ink-muted leading-relaxed mb-3">
         Inspection fee released to agent. A verified record of this transaction is on file.
       </p>
+      <div className="mb-5">
+        <VerifiedRecord contextRef={escrow.id} />
+      </div>
       <ul className="bg-white border border-line rounded-2xl shadow-card text-left divide-y divide-line">
         <li className="px-4 py-3 flex justify-between text-sm">
           <span className="text-ink-muted">Released</span>

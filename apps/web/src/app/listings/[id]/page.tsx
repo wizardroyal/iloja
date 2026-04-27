@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { MobileFrame } from '@/components/mobile-frame';
+import { VerifiedRecord } from '@/components/verified-record';
 import { getServerClient } from '@/lib/api';
 import { formatNairaFromKobo } from '@/lib/sample-listings';
 
@@ -149,9 +150,7 @@ function Hero({ listing }: { listing: ListingResponse }) {
               </div>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-[9px] text-mint/55 font-mono">on-chain record</div>
-          </div>
+          <VerifiedRecord contextRef={listing.id} label="Record" compact />
         </div>
       )}
     </div>

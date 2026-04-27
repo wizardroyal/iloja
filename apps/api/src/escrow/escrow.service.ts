@@ -9,6 +9,8 @@ import {
 import { QUEUES } from '@iloja/types';
 import type { Escrow, EscrowKind, EscrowState, Prisma } from '@prisma/client';
 import { haversineMetres } from '../common/geo';
+import { CredibilityService } from '../credibility/credibility.service';
+import { DocumentsService } from '../documents/documents.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ESCROW_CUSTODIAN_PROVIDER,
@@ -53,6 +55,8 @@ export class EscrowService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly queue: QueueProducer,
+    private readonly credibility: CredibilityService,
+    private readonly documents: DocumentsService,
     @Inject(PAYMENTS_PROVIDER) private readonly payments: PaymentsProvider,
     @Inject(ESCROW_CUSTODIAN_PROVIDER) private readonly custodian: EscrowCustodianProvider,
   ) {}
@@ -195,7 +199,7 @@ export class EscrowService {
   }
 
   async confirm(escrowId: string, userId: string): Promise<Escrow> {
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const escrow = await tx.escrow.findUnique({ where: { id: escrowId } });
       if (!escrow) throw new NotFoundException(`Escrow ${escrowId} not found`);
       if (escrow.payerId !== userId) throw new ForbiddenException('only the payer can confirm');
@@ -211,10 +215,50 @@ export class EscrowService {
         recipient: { bankCode: '', accountNumber: '' },
         reference: escrow.id,
       });
-      return this.transition(tx, escrow, 'released', userId, {
+      const updated = await this.transition(tx, escrow, 'released', userId, {
         resolvedAt: new Date(),
       });
+
+      // Receipt → on-chain.
+      await this.documents.writeReceipt({
+        type: 'escrow_receipt',
+        body: {
+          escrowId: updated.id,
+          kind: updated.kind,
+          payerId: updated.payerId,
+          payeeId: updated.payeeId,
+          amountKobo: updated.amountKobo.toString(),
+          feeKobo: updated.feeKobo.toString(),
+          custodianRef: updated.custodianRef,
+          resolvedAt: updated.resolvedAt?.toISOString(),
+          outcome: 'released',
+        },
+        contextRef: updated.id,
+        tx,
+      });
+
+      // Doc §2.5: completed rentals + show-up bumps.
+      await this.credibility.record({
+        subjectUserId: updated.payeeId,
+        factor: 'completed_rental',
+        delta: 5.0,
+        reason: `escrow_${updated.kind}_released`,
+        contextRef: updated.id,
+        tx,
+      });
+      await this.credibility.record({
+        subjectUserId: updated.payeeId,
+        factor: 'inspection_show_up',
+        delta: 5.0,
+        reason: `escrow_${updated.kind}_released`,
+        contextRef: updated.id,
+        tx,
+      });
+
+      return updated;
     });
+    await this.credibility.refreshAgentSnapshot(result.payeeId);
+    return result;
   }
 
   async openDispute(

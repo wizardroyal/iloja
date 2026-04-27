@@ -6,6 +6,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { Dispute, Prisma } from '@prisma/client';
+import { CredibilityService } from '../credibility/credibility.service';
+import { DocumentsService } from '../documents/documents.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ESCROW_CUSTODIAN_PROVIDER,
@@ -25,6 +27,8 @@ export class DisputesService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly credibility: CredibilityService,
+    private readonly documents: DocumentsService,
     @Inject(ESCROW_CUSTODIAN_PROVIDER) private readonly custodian: EscrowCustodianProvider,
   ) {}
 
@@ -50,7 +54,7 @@ export class DisputesService {
     inFavorOf: 'payer' | 'payee',
     decisionNotes: string,
   ): Promise<Dispute> {
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const dispute = await tx.dispute.findUnique({
         where: { id },
         include: { escrow: true },
@@ -90,20 +94,49 @@ export class DisputesService {
         });
       }
 
+      const resolvedAt = new Date();
       const updatedDispute = await tx.dispute.update({
         where: { id },
         data: {
           status: newDisputeStatus,
           decisionNotes,
-          resolvedAt: new Date(),
+          resolvedAt,
         },
       });
 
       await this.transitionEscrow(tx, dispute.escrow.id, newEscrowState);
 
+      // Doc §2.5 — listing accuracy gets docked when disputes resolve in
+      // favour of the renter; restored when they don't. Either way the
+      // outcome itself is a Verified Record.
+      await this.credibility.record({
+        subjectUserId: dispute.escrow.payeeId,
+        factor: 'listing_accuracy',
+        delta: inFavorOf === 'payer' ? 1.0 : 5.0,
+        reason: `dispute_${newDisputeStatus}`,
+        contextRef: id,
+        tx,
+      });
+      await this.documents.writeReceipt({
+        type: 'dispute_outcome',
+        body: {
+          disputeId: id,
+          escrowId: dispute.escrow.id,
+          inFavorOf,
+          decisionNotes,
+          openedByUserId: dispute.openedByUserId,
+          resolvedAt: resolvedAt.toISOString(),
+        },
+        contextRef: id,
+        tx,
+      });
+
       this.logger.log(`Dispute ${id} resolved → ${newDisputeStatus}`);
-      return updatedDispute;
+      return { dispute: updatedDispute, payeeId: dispute.escrow.payeeId };
     });
+
+    await this.credibility.refreshAgentSnapshot(result.payeeId);
+    return result.dispute;
   }
 
   private async transitionEscrow(

@@ -1,6 +1,7 @@
-import { Worker } from 'bullmq';
+import { Queue, Worker } from 'bullmq';
 import IORedis from 'ioredis';
 import pino from 'pino';
+import { handleChainAnchor } from './processors/chain-anchor';
 import { handleEscrowTimer } from './processors/escrow-timers';
 import { QUEUES, type QueueName } from './queues';
 
@@ -13,9 +14,7 @@ function makeConnection(): IORedis {
 
 const processors: Record<QueueName, (jobName: string, data: unknown) => Promise<void>> = {
   [QUEUES.ESCROW_TIMERS]: handleEscrowTimer,
-  [QUEUES.CHAIN_ANCHOR]: async (jobName, data) => {
-    log.info({ jobName, data }, 'chain anchor batch (stub — Sprint 5)');
-  },
+  [QUEUES.CHAIN_ANCHOR]: handleChainAnchor,
   [QUEUES.NOTIFICATIONS]: async (jobName, data) => {
     log.info({ jobName, data }, 'notification dispatch (stub — Sprint 6)');
   },
@@ -27,7 +26,28 @@ const processors: Record<QueueName, (jobName: string, data: unknown) => Promise<
   },
 };
 
-function bootstrap(): void {
+/** Recurring jobs scheduled at boot. BullMQ dedupes by jobId across restarts. */
+async function registerRepeatingJobs(connection: IORedis): Promise<Queue[]> {
+  const queues: Queue[] = [];
+  // Hourly chain anchor batch — drains pending documents, writes hashes
+  // to Base L2.
+  const anchorQueue = new Queue(QUEUES.CHAIN_ANCHOR, { connection });
+  await anchorQueue.add(
+    'chain.anchor.batch',
+    {},
+    {
+      repeat: { every: 60 * 60 * 1000 },
+      jobId: 'chain.anchor.batch.repeat',
+      removeOnComplete: 50,
+      removeOnFail: 100,
+    },
+  );
+  queues.push(anchorQueue);
+  log.info('registered hourly chain.anchor.batch');
+  return queues;
+}
+
+async function bootstrap(): Promise<void> {
   const connection = makeConnection();
   const workers: Worker[] = [];
 
@@ -42,9 +62,14 @@ function bootstrap(): void {
     log.info({ queueName }, 'worker registered');
   }
 
+  const queues = await registerRepeatingJobs(connection).catch((err) => {
+    log.warn({ err }, 'could not register repeating jobs (Redis offline?)');
+    return [] as Queue[];
+  });
+
   const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
     log.info({ signal }, 'shutting down');
-    await Promise.all(workers.map((w) => w.close()));
+    await Promise.all([...workers.map((w) => w.close()), ...queues.map((q) => q.close())]);
     await connection.quit();
     process.exit(0);
   };
@@ -52,4 +77,4 @@ function bootstrap(): void {
   process.on('SIGTERM', shutdown);
 }
 
-bootstrap();
+void bootstrap();

@@ -1,4 +1,6 @@
 import { Global, Module } from '@nestjs/common';
+import { CHAIN_ANCHOR_PROVIDER } from './chain/chain-anchor.provider';
+import { NullChainAnchorProvider } from './chain/null-chain-anchor.provider';
 import { ESCROW_CUSTODIAN_PROVIDER } from './escrow/escrow-custodian.provider';
 import { NullEscrowCustodianProvider } from './escrow/null-escrow-custodian.provider';
 import { GEOCODING_PROVIDER } from './geocoding/geocoding.provider';
@@ -26,6 +28,7 @@ import { STORAGE_PROVIDER } from './storage/storage.provider';
     { provide: OTP_PROVIDER, useClass: NullOtpProvider },
     { provide: PAYMENTS_PROVIDER, useClass: NullPaymentsProvider },
     { provide: ESCROW_CUSTODIAN_PROVIDER, useClass: NullEscrowCustodianProvider },
+    { provide: CHAIN_ANCHOR_PROVIDER, useClass: NullChainAnchorProvider },
   ],
   exports: [
     KYC_PROVIDER,
@@ -34,6 +37,7 @@ import { STORAGE_PROVIDER } from './storage/storage.provider';
     OTP_PROVIDER,
     PAYMENTS_PROVIDER,
     ESCROW_CUSTODIAN_PROVIDER,
+    CHAIN_ANCHOR_PROVIDER,
   ],
 })
 export class ProvidersModule {}

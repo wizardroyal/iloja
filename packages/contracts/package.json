@@ -1,0 +1,10 @@
+{
+  "name": "@iloja/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "lint": "echo 'Foundry-managed; run forge fmt to format Solidity'",
+    "typecheck": "echo 'no TypeScript in this package'",
+    "test": "echo 'forge test runs in CI when Foundry is installed'"
+  }
+}
