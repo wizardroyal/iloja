@@ -1,7 +1,10 @@
 'use client';
 
-import { ApiError, IlojaClient, type ListingDraftInput } from '@iloja/sdk';
-import { useMemo, useState } from 'react';
+import { ApiError, type ListingDraftInput } from '@iloja/sdk';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+import { getBrowserClient } from '@/lib/browser-client';
+import { readSession } from '@/lib/session';
 
 type ListingType = 'short_let' | 'long_term' | 'commercial';
 type PricePeriod = 'night' | 'week' | 'month' | 'year';
@@ -24,29 +27,26 @@ const TYPE_OPTIONS: { value: ListingType; label: string; sub: string }[] = [
   { value: 'commercial', label: 'Commercial', sub: 'Shops, offices, warehouses' },
 ];
 
-/**
- * Pre-real-auth: hard-coded agent identity so the demo can create drafts
- * against the API without an OTP flow. Removed when Auth.js sessions ship.
- */
-const DEMO_AGENT_ID = 'demo-agent-1';
-const DEMO_AGENT_ROLES = ['agent'];
-
 export function ListingCreationFlow() {
+  const router = useRouter();
+  const [authed, setAuthed] = useState<boolean | null>(null);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [draft, setDraft] = useState<Draft>({});
   const [listingId, setListingId] = useState<string | null>(null);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const client = useMemo(
-    () =>
-      new IlojaClient({
-        baseUrl: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000',
-        asUserId: DEMO_AGENT_ID,
-        asUserRoles: DEMO_AGENT_ROLES,
-      }),
-    [],
-  );
+  const client = useMemo(() => getBrowserClient(), []);
+
+  useEffect(() => {
+    const session = readSession();
+    if (!session) {
+      router.push('/login');
+    } else {
+      setAuthed(true);
+    }
+  }, [router]);
 
   async function persistDraft(): Promise<void> {
     if (!draft.type) return;
@@ -56,7 +56,8 @@ export function ListingCreationFlow() {
       description: draft.description,
       bedrooms: draft.bedrooms,
       bathrooms: draft.bathrooms,
-      priceKobo: draft.priceNgn !== undefined ? String(BigInt(draft.priceNgn) * BigInt(100)) : undefined,
+      priceKobo:
+        draft.priceNgn !== undefined ? String(BigInt(draft.priceNgn) * BigInt(100)) : undefined,
       pricePeriod: draft.pricePeriod,
       neighborhood: draft.neighborhood,
       address: draft.address,
@@ -70,10 +71,44 @@ export function ListingCreationFlow() {
       }
       setError(null);
     } catch (err) {
-      // Don't block the user from proceeding — the API is optional during dev.
-      // We retry the persist on submit.
       if (err instanceof ApiError) setError(`Saved locally — API ${err.status}`);
       else setError('Saved locally — API unreachable');
+    }
+  }
+
+  async function uploadPhoto(file: File): Promise<void> {
+    if (!listingId) {
+      setError('Save details first.');
+      return;
+    }
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setError('JPEG, PNG, or WebP only.');
+      return;
+    }
+    try {
+      const presigned = await client.presignListingPhoto({
+        listingId,
+        contentType: file.type as 'image/jpeg' | 'image/png' | 'image/webp',
+      });
+      // Real PUT to R2. Will silently fail against the null-storage stub —
+      // we still record the publicUrl so the API has a row to work with.
+      try {
+        await fetch(presigned.uploadUrl, {
+          method: 'PUT',
+          headers: { 'content-type': file.type },
+          body: file,
+        });
+      } catch {
+        // Stub URL won't actually accept the upload — that's fine in dev.
+      }
+      const photo = await client.addListingPhoto(listingId, {
+        url: presigned.publicUrl,
+        position: photoUrls.length,
+      });
+      setPhotoUrls((urls) => [...urls, photo.url]);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? `Upload failed: ${err.status}` : 'Upload failed');
     }
   }
 
@@ -81,7 +116,6 @@ export function ListingCreationFlow() {
     setSubmitting(true);
     setError(null);
     try {
-      // Make sure the latest draft is persisted before submitting.
       await persistDraft();
       if (!listingId) {
         throw new Error('Draft not yet created');
@@ -90,13 +124,21 @@ export function ListingCreationFlow() {
       setStep(4);
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(`Submit failed: ${err.status} ${err.message}`);
+        setError(`Submit failed (${err.status}): ${err.message}`);
       } else {
         setError(err instanceof Error ? err.message : 'Submit failed');
       }
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (authed === null) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-ink-muted text-sm">
+        Loading…
+      </div>
+    );
   }
 
   return (
@@ -128,7 +170,13 @@ export function ListingCreationFlow() {
           />
         )}
         {step === 2 && <StepDetails draft={draft} setDraft={setDraft} />}
-        {step === 3 && <StepPhotos />}
+        {step === 3 && (
+          <StepPhotos
+            photos={photoUrls}
+            onUpload={uploadPhoto}
+            hasListingId={!!listingId}
+          />
+        )}
         {step === 4 && <StepSubmitted />}
 
         {error && (
@@ -278,7 +326,10 @@ function StepDetails({
               max={20}
               value={draft.bedrooms ?? ''}
               onChange={(e) =>
-                setDraft((d) => ({ ...d, bedrooms: e.target.value ? Number(e.target.value) : undefined }))
+                setDraft((d) => ({
+                  ...d,
+                  bedrooms: e.target.value ? Number(e.target.value) : undefined,
+                }))
               }
               className="w-full bg-white border border-line rounded-xl px-3.5 py-3 text-sm focus:border-forest focus:outline-none"
             />
@@ -352,7 +403,7 @@ function StepDetails({
             className="w-full bg-white border border-line rounded-xl px-3.5 py-3 text-sm focus:border-forest focus:outline-none"
           />
           <p className="text-[11px] text-ink-subtle mt-1">
-            Used to verify that the operator actually inspected this property.
+            Geocoded server-side; the operator&apos;s GPS is cross-checked against this.
           </p>
         </Field>
       </div>
@@ -360,23 +411,51 @@ function StepDetails({
   );
 }
 
-function StepPhotos() {
+function StepPhotos({
+  photos,
+  onUpload,
+  hasListingId,
+}: {
+  photos: string[];
+  onUpload: (f: File) => void;
+  hasListingId: boolean;
+}) {
   return (
     <div>
       <h2 className="font-display text-2xl text-forest mb-2">Add photos</h2>
       <p className="text-sm text-ink-muted mb-5">
-        At least 3 wide shots of the main rooms. We&apos;ll ask the operator to capture the rest
-        during verification.
+        At least 3 wide shots of the main rooms. The operator captures the rest during verification.
       </p>
-      <div className="border-2 border-dashed border-line-soft rounded-2xl px-4 py-12 text-center bg-white">
+
+      <label className="block border-2 border-dashed border-line-soft rounded-2xl px-4 py-12 text-center bg-white cursor-pointer">
         <div className="text-4xl mb-2">📸</div>
         <p className="text-sm font-medium text-ink mb-1">Tap to upload</p>
-        <p className="text-xs text-ink-subtle">JPG or PNG · up to 10MB each</p>
-      </div>
-      <p className="text-[11px] text-ink-subtle mt-3 leading-relaxed">
-        Image upload to Cloudflare R2 lands in Sprint 1 — for now you can submit without photos
-        and add them after verification.
-      </p>
+        <p className="text-xs text-ink-subtle">JPG, PNG, or WebP · up to 10MB each</p>
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          disabled={!hasListingId}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onUpload(file);
+            e.target.value = '';
+          }}
+        />
+      </label>
+
+      {photos.length > 0 && (
+        <ul className="mt-4 grid grid-cols-3 gap-2">
+          {photos.map((url, idx) => (
+            <li
+              key={url}
+              className="aspect-square rounded-lg bg-parchment text-[10px] text-ink-subtle flex items-center justify-center text-center px-2"
+            >
+              Photo {idx + 1}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

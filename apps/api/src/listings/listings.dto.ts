@@ -43,6 +43,14 @@ export const ListingSubmissionRequiredSchema = z.object({
   pricePeriod: PricePeriodSchema,
   neighborhood: z.string().min(2),
   address: z.string().min(5),
-  lat: z.number().min(-90).max(90),
-  lng: z.number().min(-180).max(180),
+  lat: z.number().refine((v) => v !== 0, { message: 'latitude required' }),
+  lng: z.number().refine((v) => v !== 0, { message: 'longitude required' }),
 });
+
+export const AddListingPhotoSchema = z
+  .object({
+    url: z.string().url(),
+    position: z.number().int().nonnegative().max(50),
+  })
+  .strict();
+export type AddListingPhotoDto = z.infer<typeof AddListingPhotoSchema>;

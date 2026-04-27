@@ -2,9 +2,12 @@ import { ApiError } from './errors';
 
 export interface IlojaClientOptions {
   baseUrl: string;
+  /** Bearer token from /auth/otp/verify. Preferred. */
+  token?: string;
   /**
-   * Pre-real-auth, callers may pass an opaque user id so endpoints behind
-   * CurrentUserGuard accept the request. Removed once Auth.js sessions ship.
+   * Pre-real-auth fallback. Endpoints behind CurrentUserGuard accept these
+   * headers in non-production builds. Removed once every consumer is using
+   * the bearer token path.
    */
   asUserId?: string;
   asUserRoles?: string[];
@@ -24,6 +27,7 @@ export class IlojaClient {
   constructor(opts: IlojaClientOptions) {
     this.baseUrl = opts.baseUrl.replace(/\/$/, '');
     this.headers = { 'content-type': 'application/json' };
+    if (opts.token) this.headers['authorization'] = `Bearer ${opts.token}`;
     if (opts.asUserId) this.headers['x-iloja-user-id'] = opts.asUserId;
     if (opts.asUserRoles?.length) {
       this.headers['x-iloja-user-roles'] = opts.asUserRoles.join(',');
@@ -31,16 +35,41 @@ export class IlojaClient {
     this.fetchImpl = opts.fetchImpl ?? fetch;
   }
 
+  /** Returns a copy of this client carrying a Bearer token. */
+  withToken(token: string): IlojaClient {
+    return new IlojaClient({
+      baseUrl: this.baseUrl,
+      token,
+      fetchImpl: this.fetchImpl,
+    });
+  }
+
   async health(): Promise<{ status: string; service: string; timestamp: string }> {
     return this.request('GET', '/health');
   }
 
+  // ───── Auth ─────
+
+  async requestOtp(phone: string): Promise<{ pinId: string; expiresAt: string }> {
+    return this.request('POST', '/auth/otp/request', { phone });
+  }
+
+  async verifyOtp(input: {
+    phone: string;
+    code: string;
+    fullName?: string;
+  }): Promise<{ token: string; userId: string }> {
+    return this.request('POST', '/auth/otp/verify', input);
+  }
+
   // ───── Listings ─────
 
-  async listListings(params: {
-    type?: 'short_let' | 'long_term' | 'commercial';
-    neighborhood?: string;
-  } = {}): Promise<ListingResponse[]> {
+  async listListings(
+    params: {
+      type?: 'short_let' | 'long_term' | 'commercial';
+      neighborhood?: string;
+    } = {},
+  ): Promise<ListingResponse[]> {
     const qs = new URLSearchParams();
     if (params.type) qs.set('type', params.type);
     if (params.neighborhood) qs.set('neighborhood', params.neighborhood);
@@ -50,6 +79,10 @@ export class IlojaClient {
 
   async getListing(id: string): Promise<ListingResponse> {
     return this.request('GET', `/listings/${id}`);
+  }
+
+  async listListingPhotos(id: string): Promise<ListingPhotoResponse[]> {
+    return this.request('GET', `/listings/${id}/photos`);
   }
 
   async listMyListings(): Promise<ListingResponse[]> {
@@ -68,6 +101,22 @@ export class IlojaClient {
     return this.request('POST', `/listings/${id}/submit`);
   }
 
+  async addListingPhoto(
+    id: string,
+    input: { url: string; position: number },
+  ): Promise<ListingPhotoResponse> {
+    return this.request('POST', `/listings/${id}/photos`, input);
+  }
+
+  // ───── Uploads ─────
+
+  async presignListingPhoto(input: {
+    listingId: string;
+    contentType: 'image/jpeg' | 'image/png' | 'image/webp';
+  }): Promise<PresignResult> {
+    return this.request('POST', '/uploads/listing-photo', input);
+  }
+
   // ───── Verification ─────
 
   async listVerificationJobs(
@@ -84,7 +133,10 @@ export class IlojaClient {
     return this.request('POST', `/verification/jobs/${id}/claim`);
   }
 
-  async submitVerification(id: string, input: SubmitVerificationInput): Promise<VerificationJobResponse> {
+  async submitVerification(
+    id: string,
+    input: SubmitVerificationInput,
+  ): Promise<VerificationJobResponse> {
     return this.request('POST', `/verification/jobs/${id}/submit`, input);
   }
 
@@ -120,10 +172,9 @@ function safeJsonParse(s: string): unknown {
 }
 
 // ───────── Wire types ─────────
-// Declared here rather than imported from @iloja/types because they're the
-// shape the API actually returns (Prisma serializes BigInts as strings, etc).
-// The Zod schemas in @iloja/types are the canonical domain — these are the
-// JSON wire shapes.
+// These are the JSON shapes the API actually returns (Prisma serializes
+// BigInts as strings, etc). The Zod schemas in @iloja/types are the canonical
+// domain — these are the wire shapes.
 
 export interface ListingDraftInput {
   type: 'short_let' | 'long_term' | 'commercial';
@@ -159,7 +210,19 @@ export interface ListingResponse {
   verifiedAt: string | null;
   createdAt: string;
   updatedAt: string;
-  photos?: { id: string; url: string; position: number }[];
+  photos?: ListingPhotoResponse[];
+}
+
+export interface ListingPhotoResponse {
+  id: string;
+  url: string;
+  position: number;
+}
+
+export interface PresignResult {
+  uploadUrl: string;
+  publicUrl: string;
+  key: string;
 }
 
 export interface SubmitVerificationInput {

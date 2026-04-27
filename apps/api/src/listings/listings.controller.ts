@@ -10,7 +10,7 @@ import {
   UseGuards,
   UsePipes,
 } from '@nestjs/common';
-import type { Listing } from '@prisma/client';
+import type { Listing, ListingPhoto } from '@prisma/client';
 import {
   CurrentUser,
   CurrentUserGuard,
@@ -19,6 +19,8 @@ import {
 } from '../auth/current-user';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import {
+  AddListingPhotoDto,
+  AddListingPhotoSchema,
   CreateListingDraftDto,
   CreateListingDraftSchema,
   UpdateListingDraftDto,
@@ -50,6 +52,11 @@ export class ListingsController {
     return this.listings.findById(id);
   }
 
+  @Get(':id/photos')
+  listPhotos(@Param('id') id: string): Promise<ListingPhoto[]> {
+    return this.listings.listPhotos(id);
+  }
+
   @Post()
   @UseGuards(CurrentUserGuard)
   @UsePipes(new ZodValidationPipe(CreateListingDraftSchema))
@@ -77,5 +84,16 @@ export class ListingsController {
   @UseGuards(CurrentUserGuard)
   submit(@Param('id') id: string, @CurrentUserParam() user: CurrentUser): Promise<Listing> {
     return this.listings.submitForVerification(id, user.id);
+  }
+
+  @Post(':id/photos')
+  @UseGuards(CurrentUserGuard)
+  @UsePipes(new ZodValidationPipe(AddListingPhotoSchema))
+  addPhoto(
+    @Param('id') id: string,
+    @CurrentUserParam() user: CurrentUser,
+    @Body() body: AddListingPhotoDto,
+  ): Promise<ListingPhoto> {
+    return this.listings.addPhoto(id, user.id, body);
   }
 }

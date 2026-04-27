@@ -68,6 +68,26 @@ model AgentProfile {
   updatedAt DateTime @updatedAt
 }
 
+/// OTP challenge issued during login. The plaintext code is hashed before
+/// storage; only the digest leaves the server. Single-use — `consumedAt`
+/// is set on a successful verify.
+model OtpChallenge {
+  id          String    @id @default(cuid())
+  phone       String
+  /// SHA-256 of code + salt. Never store plaintext.
+  codeHash    String
+  salt        String
+  /// Provider's reference (e.g. Termii pinId). Null when null-provider used.
+  providerRef String?
+  attempts    Int       @default(0)
+  expiresAt   DateTime
+  consumedAt  DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([phone, createdAt])
+}
+
 // ───────────────────────── Listings ─────────────────────────
 
 enum ListingType {
