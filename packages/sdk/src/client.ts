@@ -303,6 +303,66 @@ export class IlojaClient {
     return this.request('GET', `/documents?contextRef=${encodeURIComponent(contextRef)}`);
   }
 
+  // ───── Notifications ─────
+
+  async listNotifications(unreadOnly = false): Promise<NotificationResponse[]> {
+    return this.request('GET', `/notifications${unreadOnly ? '?unread=true' : ''}`);
+  }
+
+  async unreadNotificationCount(): Promise<{ unread: number }> {
+    return this.request('GET', '/notifications/count');
+  }
+
+  async markNotificationsRead(ids?: string[]): Promise<{ updated: number }> {
+    return this.request('POST', '/notifications/read', { ids });
+  }
+
+  // ───── Agent dashboard ─────
+
+  async getAgentDashboard(): Promise<AgentDashboardResponse> {
+    return this.request('GET', '/agents/me/dashboard');
+  }
+
+  // ───── Flags ─────
+
+  async flagListing(input: {
+    listingId: string;
+    reason: string;
+    evidenceUrls?: string[];
+  }): Promise<ListingFlagResponse> {
+    return this.request('POST', '/flags', input);
+  }
+
+  async listOpenFlags(): Promise<ListingFlagResponse[]> {
+    return this.request('GET', '/flags/open');
+  }
+
+  async resolveFlag(
+    id: string,
+    input: { valid: boolean; decisionNotes: string },
+  ): Promise<ListingFlagResponse> {
+    return this.request('POST', `/flags/${id}/resolve`, input);
+  }
+
+  // ───── Moderation ─────
+
+  async listActiveRestrictions(): Promise<UserRestrictionResponse[]> {
+    return this.request('GET', '/moderation/restrictions');
+  }
+
+  async restrictUser(input: {
+    userId: string;
+    kind: 'warning' | 'inspection_cooldown' | 'account_suspended' | 'permanent_ban';
+    reason: string;
+    expiresAt?: string;
+  }): Promise<UserRestrictionResponse> {
+    return this.request('POST', '/moderation/restrictions', input);
+  }
+
+  async liftRestriction(id: string): Promise<UserRestrictionResponse> {
+    return this.request('POST', `/moderation/restrictions/${id}/lift`);
+  }
+
   // ───── internals ─────
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -480,6 +540,91 @@ export interface EscrowResponse {
     createdAt: string;
   }[];
   disputes?: DisputeResponse[];
+}
+
+export interface NotificationResponse {
+  id: string;
+  userId: string;
+  kind: string;
+  title: string;
+  body: string;
+  href: string | null;
+  contextRef: string | null;
+  channel: 'push' | 'email' | 'sms' | 'inapp';
+  status: 'pending' | 'sent' | 'failed';
+  readAt: string | null;
+  sentAt: string | null;
+  createdAt: string;
+}
+
+export interface ListingFlagResponse {
+  id: string;
+  listingId: string;
+  flaggedById: string;
+  reason: string;
+  evidenceUrls: string[];
+  status: 'open' | 'resolved_valid' | 'resolved_invalid';
+  decisionNotes: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+}
+
+export interface UserRestrictionResponse {
+  id: string;
+  userId: string;
+  issuedById: string;
+  kind: 'warning' | 'inspection_cooldown' | 'account_suspended' | 'permanent_ban';
+  reason: string;
+  expiresAt: string | null;
+  liftedAt: string | null;
+  createdAt: string;
+}
+
+export interface AgentDashboardResponse {
+  profile: {
+    userId: string;
+    badgeTier: 'new_tier' | 'blue' | 'silver' | 'gold' | 'diamond';
+    credibilityScore: number;
+    completedRentals: number;
+    isFoundingAgent: boolean;
+    zone: string | null;
+  } | null;
+  leads: {
+    id: string;
+    listingId: string;
+    listingTitle: string;
+    listingNeighborhood: string;
+    renterId: string;
+    agentId: string;
+    lastActiveAt: string;
+    createdAt: string;
+    unread: number;
+  }[];
+  upcomingInspections: {
+    id: string;
+    threadId: string;
+    listingId: string;
+    forUserId: string;
+    byUserId: string;
+    status: 'proposed' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
+    scheduledAt: string;
+    createdAt: string;
+    confirmedAt: string | null;
+  }[];
+  listingAnalytics: {
+    listingId: string;
+    title: string;
+    status: string;
+    totalThreads: number;
+    confirmedInspections: number;
+    completedEscrows: number;
+  }[];
+  totals: {
+    activeListings: number;
+    pendingVerifications: number;
+    totalLeads: number;
+    inspectionsThisWeek: number;
+  };
 }
 
 export interface DocumentResponse {

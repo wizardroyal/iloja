@@ -11,6 +11,7 @@ import {
   type InspectionReminderPayload,
 } from '@iloja/types';
 import type { Inspection } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { QueueProducer } from '../queue/queue.producer';
 
@@ -24,6 +25,7 @@ export class InspectionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly queue: QueueProducer,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /**
@@ -41,15 +43,29 @@ export class InspectionsService {
     if (at.getTime() < Date.now() + ONE_HOUR_MS) {
       throw new BadRequestException('inspections must be at least 1 hour in the future');
     }
-    return this.prisma.inspection.create({
-      data: {
-        threadId,
-        listingId: thread.listingId,
-        forUserId: thread.renterId,
-        byUserId: thread.agentId,
-        scheduledAt: at,
-        status: 'proposed',
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const inspection = await tx.inspection.create({
+        data: {
+          threadId,
+          listingId: thread.listingId,
+          forUserId: thread.renterId,
+          byUserId: thread.agentId,
+          scheduledAt: at,
+          status: 'proposed',
+        },
+      });
+      // Always notify the agent — they're the side that has to confirm,
+      // and renter-proposed slots are the dominant case.
+      await this.notifications.notify({
+        userId: thread.agentId,
+        kind: 'inspection_proposed',
+        title: 'New inspection proposed',
+        body: at.toLocaleString('en-NG', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+        href: `/chat/${threadId}`,
+        contextRef: inspection.id,
+        tx,
+      });
+      return inspection;
     });
   }
 
@@ -68,6 +84,20 @@ export class InspectionsService {
       data: { status: 'confirmed', confirmedAt: new Date() },
     });
     await this.scheduleReminders(updated);
+    await this.notifications.notify({
+      userId: inspection.forUserId,
+      kind: 'inspection_confirmed',
+      title: 'Inspection confirmed',
+      body: updated.scheduledAt.toLocaleString('en-NG', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      href: `/chat/${inspection.threadId}`,
+      contextRef: inspection.id,
+    });
     return updated;
   }
 

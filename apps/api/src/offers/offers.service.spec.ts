@@ -9,19 +9,11 @@ import { OffersService } from './offers.service';
 function makeFakePrisma(thread: { id: string; renterId: string; agentId: string } | null) {
   const events: OfferEvent[] = [];
   let id = 1;
-  return {
-    events,
+  const txClient = {
     thread: {
-      findUnique: async () => thread,
       update: async () => thread,
     },
     offerEvent: {
-      findFirst: async ({ orderBy }: { orderBy: { createdAt: 'asc' | 'desc' } }) => {
-        if (events.length === 0) return null;
-        const sorted = [...events].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-        return orderBy.createdAt === 'desc' ? sorted[sorted.length - 1] : sorted[0];
-      },
-      findMany: async () => events,
       create: async ({
         data,
       }: {
@@ -40,7 +32,31 @@ function makeFakePrisma(thread: { id: string; renterId: string; agentId: string 
         return ev;
       },
     },
-    $transaction: async (ops: Promise<unknown>[]) => Promise.all(ops),
+    notification: {
+      create: async () => ({ id: 'n1' }),
+    },
+  };
+  return {
+    events,
+    thread: {
+      findUnique: async () => thread,
+      update: async () => thread,
+    },
+    offerEvent: {
+      findFirst: async ({ orderBy }: { orderBy: { createdAt: 'asc' | 'desc' } }) => {
+        if (events.length === 0) return null;
+        const sorted = [...events].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+        return orderBy.createdAt === 'desc' ? sorted[sorted.length - 1] : sorted[0];
+      },
+      findMany: async () => events,
+      create: txClient.offerEvent.create,
+    },
+    $transaction: async (
+      cb: ((c: typeof txClient) => Promise<unknown>) | Promise<unknown>[],
+    ) => {
+      if (Array.isArray(cb)) return Promise.all(cb);
+      return cb(txClient);
+    },
   };
 }
 
@@ -51,7 +67,7 @@ const THREAD = { id: 't1', renterId: RENTER, agentId: AGENT };
 describe('OffersService', () => {
   it('renter makes the first offer; agent counters; renter accepts', async () => {
     const prisma = makeFakePrisma(THREAD);
-    const svc = new OffersService(prisma as never);
+    const svc = new OffersService(prisma as never, { notify: jest.fn(async () => ({})) } as never);
 
     const offer = await svc.makeOffer(THREAD.id, RENTER, { amountKobo: BigInt(800_000_00) });
     expect(offer.type).toBe('offer_made');
@@ -65,7 +81,7 @@ describe('OffersService', () => {
 
   it('rejects two consecutive offers from the same party', async () => {
     const prisma = makeFakePrisma(THREAD);
-    const svc = new OffersService(prisma as never);
+    const svc = new OffersService(prisma as never, { notify: jest.fn(async () => ({})) } as never);
     await svc.makeOffer(THREAD.id, RENTER, { amountKobo: BigInt(800_000_00) });
 
     await expect(
@@ -75,7 +91,7 @@ describe('OffersService', () => {
 
   it('rejects accepting your own offer', async () => {
     const prisma = makeFakePrisma(THREAD);
-    const svc = new OffersService(prisma as never);
+    const svc = new OffersService(prisma as never, { notify: jest.fn(async () => ({})) } as never);
     await svc.makeOffer(THREAD.id, RENTER, { amountKobo: BigInt(800_000_00) });
 
     await expect(svc.accept(THREAD.id, RENTER)).rejects.toBeInstanceOf(BadRequestException);
@@ -83,7 +99,7 @@ describe('OffersService', () => {
 
   it('rejects further actions after accept', async () => {
     const prisma = makeFakePrisma(THREAD);
-    const svc = new OffersService(prisma as never);
+    const svc = new OffersService(prisma as never, { notify: jest.fn(async () => ({})) } as never);
     await svc.makeOffer(THREAD.id, RENTER, { amountKobo: BigInt(800_000_00) });
     await svc.accept(THREAD.id, AGENT);
 
@@ -94,7 +110,7 @@ describe('OffersService', () => {
 
   it('only the offerer can withdraw', async () => {
     const prisma = makeFakePrisma(THREAD);
-    const svc = new OffersService(prisma as never);
+    const svc = new OffersService(prisma as never, { notify: jest.fn(async () => ({})) } as never);
     await svc.makeOffer(THREAD.id, RENTER, { amountKobo: BigInt(800_000_00) });
 
     await expect(svc.withdraw(THREAD.id, AGENT)).rejects.toBeInstanceOf(ForbiddenException);

@@ -450,3 +450,111 @@ model Document {
 
   @@index([anchorStatus, createdAt])
 }
+
+// ───────────────────────── Notifications ─────────────────────────
+
+enum NotificationKind {
+  message_new
+  offer_made
+  offer_countered
+  offer_accepted
+  offer_declined
+  inspection_proposed
+  inspection_confirmed
+  inspection_reminder_24h
+  inspection_reminder_1h
+  escrow_funded
+  escrow_released
+  escrow_refunded
+  escrow_disputed
+  listing_verified
+  listing_rejected
+}
+
+enum NotificationChannel {
+  push
+  email
+  sms
+  inapp
+}
+
+enum NotificationStatus {
+  pending
+  sent
+  failed
+}
+
+/// User-facing notification. Persisted regardless of delivery channel so
+/// the bell-icon list shows it even if push/email fails.
+model Notification {
+  id        String              @id @default(cuid())
+  userId    String
+  kind      NotificationKind
+  /// Short title rendered in the push payload + inbox row.
+  title     String
+  body      String              @db.Text
+  /// In-app deep link (e.g. /chat/abc123).
+  href      String?
+  /// Free-form context for the consumer side (chat threadId, escrowId…).
+  contextRef String?
+  channel   NotificationChannel @default(push)
+  status    NotificationStatus  @default(pending)
+  readAt    DateTime?
+  sentAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, readAt, createdAt])
+  @@index([status, createdAt])
+}
+
+// ───────────────────────── User restrictions & flags ─────────────────────────
+
+enum UserRestrictionKind {
+  warning
+  inspection_cooldown
+  account_suspended
+  permanent_ban
+}
+
+/// Admin-issued restriction on a user account. Active iff `expiresAt` is
+/// null or in the future. The doc explicitly lists "Misrepresented listing:
+/// immediate delisting, credibility score docked, possible permanent ban"
+/// as anti-fraud measures.
+model UserRestriction {
+  id          String              @id @default(cuid())
+  userId      String
+  issuedById  String
+  kind        UserRestrictionKind
+  reason      String              @db.Text
+  expiresAt   DateTime?
+  liftedAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, expiresAt])
+}
+
+enum ListingFlagStatus {
+  open
+  resolved_valid
+  resolved_invalid
+}
+
+/// Community flag against an active listing. Per doc §2.3 "Community
+/// flagging on all active listings".
+model ListingFlag {
+  id            String            @id @default(cuid())
+  listingId     String
+  flaggedById   String
+  reason        String            @db.Text
+  evidenceUrls  String[]
+  status        ListingFlagStatus @default(open)
+  decisionNotes String?
+
+  createdAt   DateTime  @default(now())
+  resolvedAt  DateTime?
+
+  @@index([listingId, status])
+  @@index([status, createdAt])
+}

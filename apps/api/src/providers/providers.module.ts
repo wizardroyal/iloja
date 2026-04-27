@@ -7,6 +7,8 @@ import { GEOCODING_PROVIDER } from './geocoding/geocoding.provider';
 import { NullGeocodingProvider } from './geocoding/null-geocoding.provider';
 import { KYC_PROVIDER } from './kyc/kyc.provider';
 import { NullKycProvider } from './kyc/null-kyc.provider';
+import { NullNotificationsProvider } from './notifications/null-notifications.provider';
+import { NOTIFICATIONS_PROVIDER } from './notifications/notifications.provider';
 import { NullOtpProvider } from './otp/null-otp.provider';
 import { OTP_PROVIDER } from './otp/otp.provider';
 import { NullPaymentsProvider } from './payments/null-payments.provider';
@@ -29,6 +31,7 @@ import { STORAGE_PROVIDER } from './storage/storage.provider';
     { provide: PAYMENTS_PROVIDER, useClass: NullPaymentsProvider },
     { provide: ESCROW_CUSTODIAN_PROVIDER, useClass: NullEscrowCustodianProvider },
     { provide: CHAIN_ANCHOR_PROVIDER, useClass: NullChainAnchorProvider },
+    { provide: NOTIFICATIONS_PROVIDER, useClass: NullNotificationsProvider },
   ],
   exports: [
     KYC_PROVIDER,
@@ -38,6 +41,7 @@ import { STORAGE_PROVIDER } from './storage/storage.provider';
     PAYMENTS_PROVIDER,
     ESCROW_CUSTODIAN_PROVIDER,
     CHAIN_ANCHOR_PROVIDER,
+    NOTIFICATIONS_PROVIDER,
   ],
 })
 export class ProvidersModule {}

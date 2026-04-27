@@ -1,10 +1,14 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { ChatMessage, Thread } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class ChatService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   /**
    * Idempotent: opens (or returns the existing) thread between a renter and
@@ -62,15 +66,26 @@ export class ChatService {
     const thread = await this.prisma.thread.findUnique({ where: { id: threadId } });
     if (!thread) throw new NotFoundException(`Thread ${threadId} not found`);
     this.assertParticipant(thread, userId);
-    const [, message] = await this.prisma.$transaction([
-      this.prisma.thread.update({
+    const message = await this.prisma.$transaction(async (tx) => {
+      await tx.thread.update({
         where: { id: threadId },
         data: { lastActiveAt: new Date() },
-      }),
-      this.prisma.chatMessage.create({
+      });
+      const created = await tx.chatMessage.create({
         data: { threadId, byUserId: userId, body },
-      }),
-    ]);
+      });
+      const recipientId = thread.renterId === userId ? thread.agentId : thread.renterId;
+      await this.notifications.notify({
+        userId: recipientId,
+        kind: 'message_new',
+        title: 'New message',
+        body: body.slice(0, 120),
+        href: `/chat/${threadId}`,
+        contextRef: threadId,
+        tx,
+      });
+      return created;
+    });
     return message;
   }
 

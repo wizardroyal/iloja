@@ -35,6 +35,7 @@ const surfaces: Surface[] = [
     title: 'Listing flag review',
     desc: 'Community-flagged listings awaiting decision.',
     sprint: 'Sprint 6',
+    href: '/flags',
   },
 ];
 

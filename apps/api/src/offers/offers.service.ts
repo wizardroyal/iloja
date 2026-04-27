@@ -4,7 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { OfferEvent, OfferEventType, Thread } from '@prisma/client';
+import type { NotificationKind, OfferEvent, OfferEventType, Thread } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
@@ -19,7 +20,10 @@ import { PrismaService } from '../prisma/prisma.service';
  */
 @Injectable()
 export class OffersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async list(threadId: string, userId: string): Promise<OfferEvent[]> {
     await this.assertParticipant(threadId, userId);
@@ -99,16 +103,45 @@ export class OffersService {
     userId: string,
     data: { type: OfferEventType; amountKobo: bigint | null; termsSummary: string | null },
   ): Promise<OfferEvent> {
-    const [, event] = await this.prisma.$transaction([
-      this.prisma.thread.update({
+    const thread = await this.prisma.thread.findUnique({ where: { id: threadId } });
+    if (!thread) throw new NotFoundException(`Thread ${threadId} not found`);
+    const recipientId = thread.renterId === userId ? thread.agentId : thread.renterId;
+    return this.prisma.$transaction(async (tx) => {
+      await tx.thread.update({
         where: { id: threadId },
         data: { lastActiveAt: new Date() },
-      }),
-      this.prisma.offerEvent.create({
+      });
+      const event = await tx.offerEvent.create({
         data: { threadId, byUserId: userId, ...data },
-      }),
-    ]);
-    return event;
+      });
+      const kindByType: Record<OfferEventType, NotificationKind> = {
+        offer_made: 'offer_made',
+        counter_offer: 'offer_countered',
+        accepted: 'offer_accepted',
+        declined: 'offer_declined',
+        withdrawn: 'offer_made',
+      };
+      const titleByType: Record<OfferEventType, string> = {
+        offer_made: 'New offer',
+        counter_offer: 'Counter-offer',
+        accepted: 'Offer accepted',
+        declined: 'Offer declined',
+        withdrawn: 'Offer withdrawn',
+      };
+      await this.notifications.notify({
+        userId: recipientId,
+        kind: kindByType[data.type],
+        title: titleByType[data.type],
+        body:
+          data.amountKobo !== null
+            ? `₦${(Number(data.amountKobo) / 100).toLocaleString('en-NG')}`
+            : `Update on your offer`,
+        href: `/chat/${threadId}`,
+        contextRef: threadId,
+        tx,
+      });
+      return event;
+    });
   }
 
   private async latest(threadId: string): Promise<OfferEvent | null> {

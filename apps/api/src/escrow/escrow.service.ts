@@ -11,6 +11,7 @@ import type { Escrow, EscrowKind, EscrowState, Prisma } from '@prisma/client';
 import { haversineMetres } from '../common/geo';
 import { CredibilityService } from '../credibility/credibility.service';
 import { DocumentsService } from '../documents/documents.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ESCROW_CUSTODIAN_PROVIDER,
@@ -57,6 +58,7 @@ export class EscrowService {
     private readonly queue: QueueProducer,
     private readonly credibility: CredibilityService,
     private readonly documents: DocumentsService,
+    private readonly notifications: NotificationsService,
     @Inject(PAYMENTS_PROVIDER) private readonly payments: PaymentsProvider,
     @Inject(ESCROW_CUSTODIAN_PROVIDER) private readonly custodian: EscrowCustodianProvider,
   ) {}
@@ -163,6 +165,24 @@ export class EscrowService {
       const updated = await this.transition(tx, escrow, 'funded', null, {
         fundedAt: new Date(),
       });
+      await this.notifications.notify({
+        userId: escrow.payerId,
+        kind: 'escrow_funded',
+        title: 'Escrow funded',
+        body: 'Your inspection fee is held. Show up at the property to confirm.',
+        href: `/escrow/${escrow.id}`,
+        contextRef: escrow.id,
+        tx,
+      });
+      await this.notifications.notify({
+        userId: escrow.payeeId,
+        kind: 'escrow_funded',
+        title: 'Inspection fee funded',
+        body: 'Renter has paid into escrow.',
+        href: `/escrow/${escrow.id}`,
+        contextRef: escrow.id,
+        tx,
+      });
       this.logger.log(`Escrow ${escrowId} funded`);
       return updated;
     });
@@ -255,6 +275,16 @@ export class EscrowService {
         tx,
       });
 
+      await this.notifications.notify({
+        userId: updated.payeeId,
+        kind: 'escrow_released',
+        title: 'Funds released',
+        body: `₦${(Number(updated.amountKobo - updated.feeKobo) / 100).toLocaleString('en-NG')} on the way to your account.`,
+        href: `/escrow/${updated.id}`,
+        contextRef: updated.id,
+        tx,
+      });
+
       return updated;
     });
     await this.credibility.refreshAgentSnapshot(result.payeeId);
@@ -283,6 +313,18 @@ export class EscrowService {
           evidenceUrls: input.evidenceUrls ?? [],
           status: 'open',
         },
+      });
+      // Notify both sides — counterparty needs to know to defend, opener
+      // gets confirmation that ops are aware.
+      const counterpartyId = userId === escrow.payerId ? escrow.payeeId : escrow.payerId;
+      await this.notifications.notify({
+        userId: counterpartyId,
+        kind: 'escrow_disputed',
+        title: 'Escrow dispute opened',
+        body: 'Iloja ops are reviewing. Please prepare any supporting evidence.',
+        href: `/escrow/${escrow.id}`,
+        contextRef: escrow.id,
+        tx,
       });
       return this.transition(tx, escrow, 'disputed', userId, {});
     });

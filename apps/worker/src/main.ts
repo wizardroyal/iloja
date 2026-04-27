@@ -3,6 +3,7 @@ import IORedis from 'ioredis';
 import pino from 'pino';
 import { handleChainAnchor } from './processors/chain-anchor';
 import { handleEscrowTimer } from './processors/escrow-timers';
+import { handleNotificationDispatch } from './processors/notifications';
 import { QUEUES, type QueueName } from './queues';
 
 const log = pino({ name: 'iloja-worker' });
@@ -15,9 +16,7 @@ function makeConnection(): IORedis {
 const processors: Record<QueueName, (jobName: string, data: unknown) => Promise<void>> = {
   [QUEUES.ESCROW_TIMERS]: handleEscrowTimer,
   [QUEUES.CHAIN_ANCHOR]: handleChainAnchor,
-  [QUEUES.NOTIFICATIONS]: async (jobName, data) => {
-    log.info({ jobName, data }, 'notification dispatch (stub — Sprint 6)');
-  },
+  [QUEUES.NOTIFICATIONS]: handleNotificationDispatch,
   [QUEUES.INSPECTION_REMINDERS]: async (jobName, data) => {
     log.info({ jobName, data }, 'inspection reminder (stub — Sprint 6 fan-out)');
   },
