@@ -1,6 +1,7 @@
 import { Worker } from 'bullmq';
 import IORedis from 'ioredis';
 import pino from 'pino';
+import { handleEscrowTimer } from './processors/escrow-timers';
 import { QUEUES, type QueueName } from './queues';
 
 const log = pino({ name: 'iloja-worker' });
@@ -10,26 +11,19 @@ function makeConnection(): IORedis {
   return new IORedis(url, { maxRetriesPerRequest: null });
 }
 
-/**
- * Stub processors. Each will move into its own file once we have real work to
- * do. For Sprint 0 they exist so the worker boots and the queue contract is
- * visible.
- */
 const processors: Record<QueueName, (jobName: string, data: unknown) => Promise<void>> = {
-  [QUEUES.ESCROW_TIMERS]: async (jobName, data) => {
-    log.info({ jobName, data }, 'escrow timer fired (stub)');
-  },
+  [QUEUES.ESCROW_TIMERS]: handleEscrowTimer,
   [QUEUES.CHAIN_ANCHOR]: async (jobName, data) => {
-    log.info({ jobName, data }, 'chain anchor batch (stub)');
+    log.info({ jobName, data }, 'chain anchor batch (stub — Sprint 5)');
   },
   [QUEUES.NOTIFICATIONS]: async (jobName, data) => {
-    log.info({ jobName, data }, 'notification dispatch (stub)');
+    log.info({ jobName, data }, 'notification dispatch (stub — Sprint 6)');
   },
   [QUEUES.INSPECTION_REMINDERS]: async (jobName, data) => {
-    log.info({ jobName, data }, 'inspection reminder (stub)');
+    log.info({ jobName, data }, 'inspection reminder (stub — Sprint 6 fan-out)');
   },
   [QUEUES.LISTING_REVERIFICATION]: async (jobName, data) => {
-    log.info({ jobName, data }, 'listing re-verification (stub)');
+    log.info({ jobName, data }, 'listing re-verification (stub — Phase 2)');
   },
 };
 

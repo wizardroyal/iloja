@@ -24,6 +24,7 @@ const surfaces: Surface[] = [
     title: 'Dispute case management',
     desc: 'Evidence review, adjudication, outcome logging.',
     sprint: 'Sprint 4',
+    href: '/disputes',
   },
   {
     title: 'User management',

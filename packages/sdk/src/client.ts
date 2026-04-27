@@ -244,6 +244,55 @@ export class IlojaClient {
     return this.request('POST', `/inspections/${id}/cancel`);
   }
 
+  // ───── Escrow ─────
+
+  async listMyEscrows(): Promise<EscrowResponse[]> {
+    return this.request('GET', '/escrow');
+  }
+
+  async getEscrow(id: string): Promise<EscrowResponse> {
+    return this.request('GET', `/escrow/${id}`);
+  }
+
+  async createInspectionEscrow(input: { inspectionId: string }): Promise<{
+    escrow: EscrowResponse;
+    authorizationUrl: string;
+  }> {
+    return this.request('POST', '/escrow/inspection', input);
+  }
+
+  async escrowCheckIn(id: string, input: { lat: number; lng: number }): Promise<{ ok: true }> {
+    return this.request('POST', `/escrow/${id}/check-in`, input);
+  }
+
+  async escrowConfirm(id: string): Promise<EscrowResponse> {
+    return this.request('POST', `/escrow/${id}/confirm`);
+  }
+
+  async escrowDispute(
+    id: string,
+    input: { reason: string; evidenceUrls?: string[] },
+  ): Promise<EscrowResponse> {
+    return this.request('POST', `/escrow/${id}/dispute`, input);
+  }
+
+  // ───── Disputes (admin) ─────
+
+  async listOpenDisputes(): Promise<DisputeResponse[]> {
+    return this.request('GET', '/disputes');
+  }
+
+  async getDispute(id: string): Promise<DisputeResponse> {
+    return this.request('GET', `/disputes/${id}`);
+  }
+
+  async decideDispute(
+    id: string,
+    input: { inFavorOf: 'payer' | 'payee'; decisionNotes: string },
+  ): Promise<DisputeResponse> {
+    return this.request('POST', `/disputes/${id}/decide`, input);
+  }
+
   // ───── internals ─────
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -396,6 +445,44 @@ export interface InspectionResponse {
   scheduledAt: string;
   createdAt: string;
   confirmedAt: string | null;
+}
+
+export interface EscrowResponse {
+  id: string;
+  kind: 'inspection_fee' | 'short_let_booking' | 'long_term_rent';
+  state: 'created' | 'funded' | 'released' | 'refunded' | 'disputed' | 'expired';
+  payerId: string;
+  payeeId: string;
+  listingId: string | null;
+  amountKobo: string;
+  feeKobo: string;
+  custodianRef: string | null;
+  autoReleaseAt: string | null;
+  createdAt: string;
+  fundedAt: string | null;
+  resolvedAt: string | null;
+  events?: {
+    id: string;
+    fromState: EscrowResponse['state'];
+    toState: EscrowResponse['state'];
+    actorUserId: string | null;
+    reason: string | null;
+    createdAt: string;
+  }[];
+  disputes?: DisputeResponse[];
+}
+
+export interface DisputeResponse {
+  id: string;
+  escrowId: string;
+  openedByUserId: string;
+  status: 'open' | 'evidence' | 'resolved_payer' | 'resolved_payee';
+  reason: string;
+  evidenceUrls: string[];
+  decisionNotes: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+  escrow?: EscrowResponse;
 }
 
 export interface BenchmarkResponse {
