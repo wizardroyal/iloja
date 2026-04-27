@@ -172,6 +172,78 @@ export class IlojaClient {
     return this.request('POST', `/verification/jobs/${id}/reject`, { reason });
   }
 
+  // ───── Chat ─────
+
+  async openThread(listingId: string): Promise<ThreadResponse> {
+    return this.request('POST', '/chat/threads', { listingId });
+  }
+
+  async listThreads(): Promise<ThreadResponse[]> {
+    return this.request('GET', '/chat/threads');
+  }
+
+  async getThread(id: string): Promise<ThreadResponse> {
+    return this.request('GET', `/chat/threads/${id}`);
+  }
+
+  async listMessages(threadId: string): Promise<ChatMessageResponse[]> {
+    return this.request('GET', `/chat/threads/${threadId}/messages`);
+  }
+
+  async sendMessage(threadId: string, body: string): Promise<ChatMessageResponse> {
+    return this.request('POST', `/chat/threads/${threadId}/messages`, { body });
+  }
+
+  async markThreadRead(threadId: string): Promise<{ updated: number }> {
+    return this.request('POST', `/chat/threads/${threadId}/read`);
+  }
+
+  // ───── Offers ─────
+
+  async listOffers(threadId: string): Promise<OfferEventResponse[]> {
+    return this.request('GET', `/chat/threads/${threadId}/offers`);
+  }
+
+  async makeOffer(
+    threadId: string,
+    input: { amountKobo: string; termsSummary?: string },
+  ): Promise<OfferEventResponse> {
+    return this.request('POST', `/chat/threads/${threadId}/offers`, input);
+  }
+
+  async acceptOffer(threadId: string): Promise<OfferEventResponse> {
+    return this.request('POST', `/chat/threads/${threadId}/offers/accept`);
+  }
+
+  async declineOffer(threadId: string): Promise<OfferEventResponse> {
+    return this.request('POST', `/chat/threads/${threadId}/offers/decline`);
+  }
+
+  async withdrawOffer(threadId: string): Promise<OfferEventResponse> {
+    return this.request('POST', `/chat/threads/${threadId}/offers/withdraw`);
+  }
+
+  // ───── Inspections ─────
+
+  async listInspections(threadId: string): Promise<InspectionResponse[]> {
+    return this.request('GET', `/inspections?threadId=${encodeURIComponent(threadId)}`);
+  }
+
+  async proposeInspection(input: {
+    threadId: string;
+    scheduledAt: string;
+  }): Promise<InspectionResponse> {
+    return this.request('POST', '/inspections', input);
+  }
+
+  async confirmInspection(id: string): Promise<InspectionResponse> {
+    return this.request('POST', `/inspections/${id}/confirm`);
+  }
+
+  async cancelInspection(id: string): Promise<InspectionResponse> {
+    return this.request('POST', `/inspections/${id}/cancel`);
+  }
+
   // ───── internals ─────
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -284,6 +356,46 @@ export interface AgentProfileResponse {
     averageRating: number | null;
     reviewCount: number;
   };
+}
+
+export interface ThreadResponse {
+  id: string;
+  listingId: string;
+  renterId: string;
+  agentId: string;
+  createdAt: string;
+  lastActiveAt: string;
+}
+
+export interface ChatMessageResponse {
+  id: string;
+  threadId: string;
+  byUserId: string;
+  body: string;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface OfferEventResponse {
+  id: string;
+  threadId: string;
+  byUserId: string;
+  type: 'offer_made' | 'counter_offer' | 'accepted' | 'declined' | 'withdrawn';
+  amountKobo: string | null;
+  termsSummary: string | null;
+  createdAt: string;
+}
+
+export interface InspectionResponse {
+  id: string;
+  threadId: string;
+  listingId: string;
+  forUserId: string;
+  byUserId: string;
+  status: 'proposed' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
+  scheduledAt: string;
+  createdAt: string;
+  confirmedAt: string | null;
 }
 
 export interface BenchmarkResponse {

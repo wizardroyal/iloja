@@ -6,3 +6,4 @@ export * from './offer';
 export * from './escrow';
 export * from './credibility';
 export * from './document';
+export * from './queues';

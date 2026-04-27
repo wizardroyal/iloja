@@ -105,6 +105,101 @@ model Review {
   @@index([subjectUserId, createdAt])
 }
 
+// ───────────────────────── Chat & offers ─────────────────────────
+
+/// One thread per (listing, renter, agent/landlord) trio. Created lazily the
+/// first time a renter taps "Message agent" on a listing.
+model Thread {
+  id        String   @id @default(cuid())
+  listingId String
+  renterId  String
+  agentId   String
+
+  messages    ChatMessage[]
+  offerEvents OfferEvent[]
+  inspections Inspection[]
+
+  createdAt    DateTime @default(now())
+  lastActiveAt DateTime @default(now())
+
+  @@unique([listingId, renterId, agentId])
+  @@index([renterId, lastActiveAt])
+  @@index([agentId, lastActiveAt])
+}
+
+model ChatMessage {
+  id         String    @id @default(cuid())
+  threadId   String
+  byUserId   String
+  body       String    @db.Text
+  /// When the counterparty has read this message. Null until then.
+  readAt     DateTime?
+
+  thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([threadId, createdAt])
+}
+
+enum OfferEventType {
+  offer_made
+  counter_offer
+  accepted
+  declined
+  withdrawn
+}
+
+/// Append-only audit trail for offers. The doc explicitly calls this out as
+/// a renter+agent protection — every term agreed in-platform is timestamped
+/// and unchangeable.
+model OfferEvent {
+  id            String         @id @default(cuid())
+  threadId      String
+  byUserId      String
+  type          OfferEventType
+  /// Offered price in kobo. Required for offer_made / counter_offer; null
+  /// for accepted / declined / withdrawn.
+  amountKobo    BigInt?
+  termsSummary  String?
+
+  thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([threadId, createdAt])
+}
+
+enum InspectionStatus {
+  proposed
+  confirmed
+  cancelled
+  completed
+  no_show
+}
+
+/// Inspection appointment booked from inside a chat thread.
+model Inspection {
+  id           String           @id @default(cuid())
+  threadId     String
+  listingId    String
+  /// User the inspection is for (renter).
+  forUserId    String
+  /// User running the inspection (agent / landlord).
+  byUserId     String
+  status       InspectionStatus @default(proposed)
+  scheduledAt  DateTime
+
+  thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now())
+  confirmedAt DateTime?
+
+  @@index([scheduledAt, status])
+  @@index([forUserId, scheduledAt])
+  @@index([byUserId, scheduledAt])
+}
+
 // ───────────────────────── Listings ─────────────────────────
 
 enum ListingType {
