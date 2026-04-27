@@ -81,6 +81,8 @@ function makeListing(overrides: Partial<Listing>): Listing {
     lng: 3.3,
     amenities: [],
     verifiedAt: new Date('2026-04-01T00:00:00Z'),
+    publishStartAt: null,
+    publishEndAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,

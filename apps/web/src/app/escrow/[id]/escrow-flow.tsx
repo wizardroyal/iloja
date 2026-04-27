@@ -3,6 +3,7 @@
 import { ApiError, type EscrowResponse } from '@iloja/sdk';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AffiliateStrip } from '@/components/affiliate-strip';
 import { VerifiedRecord } from '@/components/verified-record';
 import { getBrowserClient } from '@/lib/browser-client';
 import { formatNairaFromKobo } from '@/lib/sample-listings';
@@ -479,6 +480,8 @@ function SuccessReceipt({ escrow }: { escrow: EscrowResponse }) {
       >
         Back to home
       </Link>
+
+      <AffiliateStrip contextRef={escrow.id} />
     </div>
   );
 }

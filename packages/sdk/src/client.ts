@@ -426,6 +426,29 @@ export class IlojaClient {
     return this.request('POST', `/subscriptions/${id}/cancel`);
   }
 
+  // ───── Affiliates ─────
+
+  async listAffiliates(category?: AffiliateCategory): Promise<AffiliateResponse[]> {
+    const qs = category ? `?category=${encodeURIComponent(category)}` : '';
+    return this.request('GET', `/affiliates${qs}`);
+  }
+
+  async clickAffiliate(input: {
+    affiliateId: string;
+    contextRef?: string;
+  }): Promise<{ redirect: string }> {
+    return this.request('POST', '/affiliates/click', input);
+  }
+
+  // ───── Listing scheduling ─────
+
+  async updateListingSchedule(
+    id: string,
+    input: { publishStartAt?: string | null; publishEndAt?: string | null },
+  ): Promise<ListingResponse> {
+    return this.request('PATCH', `/listings/${id}/schedule`, input);
+  }
+
   // ───── internals ─────
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -654,6 +677,26 @@ export interface SavedSearchResponse {
   maxPriceKobo: string | null;
   lastAlertedAt: string | null;
   createdAt: string;
+}
+
+export type AffiliateCategory =
+  | 'movers'
+  | 'internet'
+  | 'dstv'
+  | 'cleaning'
+  | 'furniture'
+  | 'utilities';
+
+export interface AffiliateResponse {
+  id: string;
+  category: AffiliateCategory;
+  name: string;
+  blurb: string;
+  url: string;
+  rank: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SubscriptionResponse {

@@ -243,6 +243,11 @@ model Listing {
   lng           Float
   amenities     String[]
   verifiedAt    DateTime?
+  /// Optional publish window. Listings only appear in /listings results
+  /// inside [publishStartAt, publishEndAt). Doc §3.2 "Operations: Listing
+  /// management — availability management".
+  publishStartAt DateTime?
+  publishEndAt   DateTime?
 
   owner             User                @relation(fields: [ownerId], references: [id])
   photos            ListingPhoto[]
@@ -643,4 +648,55 @@ model Subscription {
   cancelledAt DateTime?
 
   @@index([userId, status])
+}
+
+// ───────────────────────── Phase 2: affiliates ─────────────────────────
+
+enum AffiliateCategory {
+  movers
+  internet
+  dstv
+  cleaning
+  furniture
+  utilities
+}
+
+/// Affiliate partner (movers, internet, DSTV, cleaning…). Per doc §6 Tier 2:
+/// "perfectly timed (renter just confirmed) and require no additional
+/// acquisition cost". Each click writes an AffiliateClick we can later
+/// reconcile against partner reports for commission.
+model Affiliate {
+  id              String            @id @default(cuid())
+  category        AffiliateCategory
+  name            String
+  /// Short pitch shown next to the click-out CTA.
+  blurb           String
+  /// Outbound URL — partner-supplied with a tracking code embedded.
+  url             String
+  /// Display order within the category. Lower = higher.
+  rank            Int               @default(100)
+  /// Soft toggle so ops can pause partners without deleting the row.
+  active          Boolean           @default(true)
+
+  clicks AffiliateClick[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category, active, rank])
+}
+
+/// One row per click-through. Captures the user (when known) and a
+/// freeform context string (e.g. the escrow id that surfaced the strip).
+model AffiliateClick {
+  id          String   @id @default(cuid())
+  affiliateId String
+  userId      String?
+  contextRef  String?
+
+  affiliate Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([affiliateId, createdAt])
 }

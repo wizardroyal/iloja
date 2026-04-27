@@ -25,6 +25,8 @@ import {
   CreateListingDraftSchema,
   UpdateListingDraftDto,
   UpdateListingDraftSchema,
+  UpdateListingScheduleDto,
+  UpdateListingScheduleSchema,
 } from './listings.dto';
 import { ListingsService } from './listings.service';
 
@@ -104,5 +106,16 @@ export class ListingsController {
     @Body() body: AddListingPhotoDto,
   ): Promise<ListingPhoto> {
     return this.listings.addPhoto(id, user.id, body);
+  }
+
+  @Patch(':id/schedule')
+  @UseGuards(CurrentUserGuard)
+  @UsePipes(new ZodValidationPipe(UpdateListingScheduleSchema))
+  updateSchedule(
+    @Param('id') id: string,
+    @CurrentUserParam() user: CurrentUser,
+    @Body() body: UpdateListingScheduleDto,
+  ): Promise<Listing> {
+    return this.listings.updateSchedule(id, user.id, body);
   }
 }

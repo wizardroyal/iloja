@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AffiliatesModule } from './affiliates/affiliates.module';
 import { AgentsModule } from './agents/agents.module';
 import { AgreementsModule } from './agreements/agreements.module';
 import { AuditModule } from './audit/audit.module';
@@ -50,6 +51,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     SavedSearchesModule,
     AgreementsModule,
     SubscriptionsModule,
+    AffiliatesModule,
     WebhooksModule,
   ],
   controllers: [HealthController],

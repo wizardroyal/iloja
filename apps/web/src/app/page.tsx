@@ -241,7 +241,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
         {[
           { label: 'Home', active: true, href: '/' },
           { label: 'Saved', active: false, href: '/saved' },
-          { label: 'Inspections', active: false, href: '/inspections' },
+          { label: 'Inspections', active: false, href: '/inbox' },
           { label: 'Profile', active: false, href: '/login' },
         ].map((item) => (
           <Link key={item.label} href={item.href} className="flex flex-col items-center gap-1 flex-1">

@@ -54,3 +54,11 @@ export const AddListingPhotoSchema = z
   })
   .strict();
 export type AddListingPhotoDto = z.infer<typeof AddListingPhotoSchema>;
+
+export const UpdateListingScheduleSchema = z
+  .object({
+    publishStartAt: z.string().datetime().nullable().optional(),
+    publishEndAt: z.string().datetime().nullable().optional(),
+  })
+  .strict();
+export type UpdateListingScheduleDto = z.infer<typeof UpdateListingScheduleSchema>;

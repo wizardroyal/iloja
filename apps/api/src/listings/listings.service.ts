@@ -72,6 +72,7 @@ export class ListingsService {
     if (params.minPriceKobo !== undefined) priceFilter.gte = params.minPriceKobo;
     if (params.maxPriceKobo !== undefined) priceFilter.lte = params.maxPriceKobo;
 
+    const now = new Date();
     return this.prisma.listing.findMany({
       where: {
         status: 'active',
@@ -79,10 +80,58 @@ export class ListingsService {
         ...(params.neighborhood ? { neighborhood: params.neighborhood } : {}),
         ...(params.bedrooms !== undefined ? { bedrooms: params.bedrooms } : {}),
         ...(Object.keys(priceFilter).length > 0 ? { priceKobo: priceFilter } : {}),
+        // Publish window: a null start/end means "always". When set the
+        // listing only appears inside [start, end).
+        AND: [
+          { OR: [{ publishStartAt: null }, { publishStartAt: { lte: now } }] },
+          { OR: [{ publishEndAt: null }, { publishEndAt: { gt: now } }] },
+        ],
       },
       orderBy: { verifiedAt: 'desc' },
       take: params.take ?? 20,
       include: { photos: { orderBy: { position: 'asc' }, take: 1 } },
+    });
+  }
+
+  /**
+   * Owner-side schedule update. Bounds-checks the window and refuses to
+   * accept inverted ranges. Allowed in any non-archived state so an agent
+   * can plan a future activation while the listing is still in draft.
+   */
+  async updateSchedule(
+    id: string,
+    ownerId: string,
+    input: { publishStartAt?: string | null; publishEndAt?: string | null },
+  ): Promise<Listing> {
+    const existing = await this.prisma.listing.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException(`Listing ${id} not found`);
+    if (existing.ownerId !== ownerId) throw new ForbiddenException('not your listing');
+    if (existing.status === 'archived') {
+      throw new BadRequestException('cannot reschedule an archived listing');
+    }
+    const start = input.publishStartAt === null
+      ? null
+      : input.publishStartAt
+      ? new Date(input.publishStartAt)
+      : undefined;
+    const end = input.publishEndAt === null
+      ? null
+      : input.publishEndAt
+      ? new Date(input.publishEndAt)
+      : undefined;
+    if (
+      start instanceof Date &&
+      end instanceof Date &&
+      end.getTime() <= start.getTime()
+    ) {
+      throw new BadRequestException('publishEndAt must be after publishStartAt');
+    }
+    return this.prisma.listing.update({
+      where: { id },
+      data: {
+        ...(start !== undefined ? { publishStartAt: start } : {}),
+        ...(end !== undefined ? { publishEndAt: end } : {}),
+      },
     });
   }
 
