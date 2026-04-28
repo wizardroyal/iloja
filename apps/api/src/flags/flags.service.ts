@@ -50,6 +50,15 @@ export class FlagsService {
     });
   }
 
+  /** Renter-side history — what they've reported and the outcome. */
+  async listMine(userId: string): Promise<ListingFlag[]> {
+    return this.prisma.listingFlag.findMany({
+      where: { flaggedById: userId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+  }
+
   async resolve(
     flagId: string,
     valid: boolean,

@@ -700,3 +700,62 @@ model AffiliateClick {
 
   @@index([affiliateId, createdAt])
 }
+
+// ───────────────────────── Phase 2: payouts ─────────────────────────
+
+/// Bank account a user (operator, agent, landlord) is paid into. We store
+/// only the routing fields needed for Paystack/Anchor transfers — never the
+/// full PAN or anything that should sit behind PCI scope.
+model UserBankAccount {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  /// Nigerian bank short code (Paystack-compatible).
+  bankCode      String
+  accountNumber String
+  accountName   String
+  /// Returned by Paystack `verify` — proves the (code, number) pair belongs
+  /// to the given user. Null until verified.
+  verifiedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum PayoutKind {
+  operator_verification
+  agent_escrow_release
+  landlord_escrow_release
+  refund
+}
+
+enum PayoutStatus {
+  queued
+  succeeded
+  failed
+  reversed
+}
+
+/// Audit-grade record of every outbound transfer. We persist before calling
+/// the provider so a stray webhook can be reconciled even if the request
+/// itself never succeeded.
+model Payout {
+  id           String       @id @default(cuid())
+  userId       String
+  kind         PayoutKind
+  amountKobo   BigInt
+  /// Free-form reference for our own records (e.g. verificationJobId,
+  /// escrowId). Kept distinct from providerRef so we can still find the row
+  /// when the provider hasn't responded yet.
+  contextRef   String?
+  /// Provider-side reference (Paystack transfer code or equivalent).
+  providerRef  String?
+  status       PayoutStatus @default(queued)
+  failureReason String?
+
+  createdAt   DateTime  @default(now())
+  settledAt   DateTime?
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([contextRef])
+}

@@ -5,6 +5,7 @@ import { handleChainAnchor } from './processors/chain-anchor';
 import { handleEscrowTimer } from './processors/escrow-timers';
 import { handleInspectionReminder } from './processors/inspection-reminders';
 import { handleNotificationDispatch } from './processors/notifications';
+import { handlePayoutDispatch } from './processors/payouts';
 import { handleSavedSearchAlerts } from './processors/saved-search-alerts';
 import { QUEUES, type QueueName } from './queues';
 
@@ -24,6 +25,7 @@ const processors: Record<QueueName, (jobName: string, data: unknown) => Promise<
     log.info({ jobName, data }, 'listing re-verification (stub — Phase 2)');
   },
   [QUEUES.SAVED_SEARCH_ALERTS]: handleSavedSearchAlerts,
+  [QUEUES.PAYOUTS]: handlePayoutDispatch,
 };
 
 /** Recurring jobs scheduled at boot. BullMQ dedupes by jobId across restarts. */

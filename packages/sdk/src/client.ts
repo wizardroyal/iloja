@@ -449,6 +449,30 @@ export class IlojaClient {
     return this.request('PATCH', `/listings/${id}/schedule`, input);
   }
 
+  // ───── Payouts ─────
+
+  async getMyBankAccount(): Promise<UserBankAccountResponse | null> {
+    return this.request('GET', '/payouts/bank-account');
+  }
+
+  async setMyBankAccount(input: {
+    bankCode: string;
+    accountNumber: string;
+    accountName: string;
+  }): Promise<UserBankAccountResponse> {
+    return this.request('PUT', '/payouts/bank-account', input);
+  }
+
+  async listMyPayouts(): Promise<PayoutResponse[]> {
+    return this.request('GET', '/payouts/mine');
+  }
+
+  // ───── Renter flag history ─────
+
+  async listMyFlags(): Promise<ListingFlagResponse[]> {
+    return this.request('GET', '/flags/mine');
+  }
+
   // ───── internals ─────
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -677,6 +701,34 @@ export interface SavedSearchResponse {
   maxPriceKobo: string | null;
   lastAlertedAt: string | null;
   createdAt: string;
+}
+
+export interface UserBankAccountResponse {
+  id: string;
+  userId: string;
+  bankCode: string;
+  accountNumber: string;
+  accountName: string;
+  verifiedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PayoutResponse {
+  id: string;
+  userId: string;
+  kind:
+    | 'operator_verification'
+    | 'agent_escrow_release'
+    | 'landlord_escrow_release'
+    | 'refund';
+  amountKobo: string;
+  contextRef: string | null;
+  providerRef: string | null;
+  status: 'queued' | 'succeeded' | 'failed' | 'reversed';
+  failureReason: string | null;
+  createdAt: string;
+  settledAt: string | null;
 }
 
 export type AffiliateCategory =

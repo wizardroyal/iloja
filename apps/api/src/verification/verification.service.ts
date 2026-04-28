@@ -5,12 +5,15 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { QUEUES } from '@iloja/types';
 import type { VerificationJob } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { haversineMetres } from '../common/geo';
 import { CredibilityService } from '../credibility/credibility.service';
 import { DocumentsService } from '../documents/documents.service';
+import { PayoutsService } from '../payouts/payouts.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { QueueProducer } from '../queue/queue.producer';
 import type { SubmitVerificationDto } from './verification.dto';
 
 /** Threshold from the doc: 200m mismatch flags for human review. */
@@ -25,6 +28,8 @@ export class VerificationService {
     private readonly credibility: CredibilityService,
     private readonly documents: DocumentsService,
     private readonly audit: AuditService,
+    private readonly payouts: PayoutsService,
+    private readonly queue: QueueProducer,
   ) {}
 
   async listUnclaimed(): Promise<VerificationJob[]> {
@@ -173,9 +178,27 @@ export class VerificationService {
         tx,
       });
 
-      return { updated, ownerId: job.listing.ownerId };
+      // Operator payout — queued inside the same transaction so it can't go
+      // out for an approval that gets rolled back. Worker picks it up and
+      // dispatches via PaymentsProvider.
+      let payoutId: string | null = null;
+      if (job.operatorId) {
+        const payout = await this.payouts.queueForVerification({
+          operatorId: job.operatorId,
+          verificationJobId: jobId,
+          tx,
+        });
+        payoutId = payout?.id ?? null;
+      }
+
+      return { updated, ownerId: job.listing.ownerId, payoutId };
     });
     await this.credibility.refreshAgentSnapshot(result.ownerId);
+    if (result.payoutId) {
+      await this.queue
+        .enqueue(QUEUES.PAYOUTS, 'payouts.dispatch', { id: result.payoutId })
+        .catch(() => undefined);
+    }
     return result.updated;
   }
 

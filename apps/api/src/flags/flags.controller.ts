@@ -30,6 +30,11 @@ export class FlagsController {
     return this.flags.listOpen();
   }
 
+  @Get('mine')
+  mine(@CurrentUserParam() user: CurrentUser): Promise<ListingFlag[]> {
+    return this.flags.listMine(user.id);
+  }
+
   @Post(':id/resolve')
   @UsePipes(new ZodValidationPipe(ResolveFlagSchema))
   resolve(

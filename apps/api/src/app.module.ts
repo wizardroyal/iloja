@@ -17,6 +17,7 @@ import { ListingsModule } from './listings/listings.module';
 import { ModerationModule } from './moderation/moderation.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { OffersModule } from './offers/offers.module';
+import { PayoutsModule } from './payouts/payouts.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProvidersModule } from './providers/providers.module';
 import { QueueModule } from './queue/queue.module';
@@ -52,6 +53,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     AgreementsModule,
     SubscriptionsModule,
     AffiliatesModule,
+    PayoutsModule,
     WebhooksModule,
   ],
   controllers: [HealthController],
