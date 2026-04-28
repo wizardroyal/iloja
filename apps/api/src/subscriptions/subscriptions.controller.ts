@@ -2,9 +2,11 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   HttpCode,
   Param,
   Post,
+  UnauthorizedException,
   UseGuards,
   UsePipes,
 } from '@nestjs/common';
@@ -46,5 +48,28 @@ export class SubscriptionsController {
     @CurrentUserParam() user: CurrentUser,
   ): Promise<Subscription> {
     return this.subscriptions.cancel(id, user.id);
+  }
+}
+
+/**
+ * Internal endpoint the worker calls hourly to flip past-period active
+ * subscriptions to expired. Mounted on its own controller so the path
+ * can sit outside the user-facing `/subscriptions` namespace and avoid
+ * the auth guard.
+ */
+@Controller('internal/subscriptions')
+export class InternalSubscriptionsController {
+  constructor(private readonly subscriptions: SubscriptionsService) {}
+
+  @Post('sweep-expired')
+  @HttpCode(200)
+  async sweepExpired(
+    @Headers('x-iloja-internal-secret') secret: string | undefined,
+  ): Promise<{ expired: number }> {
+    const expected = process.env.INTERNAL_SECRET;
+    if (!expected || secret !== expected) {
+      throw new UnauthorizedException('invalid internal secret');
+    }
+    return this.subscriptions.sweepExpired();
   }
 }

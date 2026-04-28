@@ -759,3 +759,125 @@ model Payout {
   @@index([status, createdAt])
   @@index([contextRef])
 }
+
+// ───────────────────────── Phase 3: third-party inspection ─────────────────────────
+
+/// Licensed third-party inspection firm. Doc §2.3 phase 3:
+/// "A licensed third-party inspection firm operates as a marketplace
+/// service. Agent pays the firm directly. Iloja coordinates, takes a
+/// coordination fee."
+model InspectionFirm {
+  id            String   @id @default(cuid())
+  name          String
+  /// Areas the firm services — neighborhoods or zones in Lagos.
+  zones         String[]
+  /// Per-inspection rate the firm charges agents, in kobo.
+  rateKobo      BigInt
+  /// Iloja's coordination fee in basis points (e.g. 500 = 5%).
+  coordinationBps Int    @default(500)
+  /// Soft toggle — pause without deleting.
+  active        Boolean  @default(true)
+  /// Contact for ops escalations.
+  contactPhone  String?
+  contactEmail  String?
+
+  bookings InspectionFirmBooking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active, name])
+}
+
+enum InspectionFirmBookingStatus {
+  pending
+  accepted
+  completed
+  cancelled
+}
+
+/// One row per agent-initiated booking with a third-party firm. Captures
+/// the firm rate + Iloja coordination fee at the time of booking so
+/// later rate changes don't rewrite history.
+model InspectionFirmBooking {
+  id              String                       @id @default(cuid())
+  firmId          String
+  /// Agent / landlord requesting the inspection.
+  byUserId        String
+  listingId       String
+  status          InspectionFirmBookingStatus  @default(pending)
+  rateKobo        BigInt
+  coordinationFeeKobo BigInt
+  scheduledAt     DateTime?
+  notes           String?
+
+  firm InspectionFirm @relation(fields: [firmId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now())
+  acceptedAt  DateTime?
+  completedAt DateTime?
+
+  @@index([firmId, status])
+  @@index([listingId])
+  @@index([byUserId, createdAt])
+}
+
+// ───────────────────────── Phase 3: corporate relocation concierge ─────────────────────────
+
+/// Doc §6 Tier 3: "Corporate relocation concierge — managed placement
+/// service for companies relocating employees to Lagos."
+model CorporateAccount {
+  id            String   @id @default(cuid())
+  name          String
+  /// Free-form note: industry, primary contact, expected volume.
+  notes         String?
+  /// Negotiated per-placement fee in kobo (₦50K-₦100K typical per the doc).
+  placementFeeKobo BigInt
+  contactPhone  String?
+  contactEmail  String?
+  active        Boolean  @default(true)
+
+  placements PlacementRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active])
+}
+
+enum PlacementRequestStatus {
+  open
+  matched
+  placed
+  cancelled
+}
+
+/// One placement request from a corporate HR contact. Iloja ops match it
+/// against active listings + agents.
+model PlacementRequest {
+  id              String                  @id @default(cuid())
+  corporateAccountId String
+  /// HR contact identity inside the corporate account (free-form).
+  hrContactName   String
+  /// Placement requirements expressed as a saved-search-style filter blob.
+  budgetMinKobo   BigInt?
+  budgetMaxKobo   BigInt?
+  bedrooms        Int?
+  preferredZones  String[]
+  needBy          DateTime?
+  notes           String?
+  status          PlacementRequestStatus  @default(open)
+  /// Listing the renter ended up at, if matched.
+  matchedListingId String?
+  /// User the placement is for (their Iloja account, once invited).
+  placedRenterId  String?
+
+  corporate CorporateAccount @relation(fields: [corporateAccountId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  placedAt  DateTime?
+
+  @@index([corporateAccountId, status])
+  @@index([status, createdAt])
+}

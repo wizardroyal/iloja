@@ -84,4 +84,24 @@ export class SubscriptionsService {
     });
     return count > 0;
   }
+
+  /**
+   * Sweep cron — flips `active` subscriptions whose period has ended to
+   * `expired`. Catches the `subscription.not_renew` Paystack webhook path:
+   * the row stays active until its period closes, then this sweep moves
+   * it. Runs hourly from the worker.
+   */
+  async sweepExpired(): Promise<{ expired: number }> {
+    const result = await this.prisma.subscription.updateMany({
+      where: {
+        status: 'active',
+        currentPeriodEnd: { lt: new Date() },
+      },
+      data: { status: 'expired' },
+    });
+    if (result.count > 0) {
+      this.logger.log(`Subscription expiry sweep moved ${result.count} → expired`);
+    }
+    return { expired: result.count };
+  }
 }

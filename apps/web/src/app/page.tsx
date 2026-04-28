@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { InboxBell } from '@/components/inbox-bell';
+import { ListingMap } from '@/components/listing-map';
 import { MobileFrame } from '@/components/mobile-frame';
 import { PropertyCard } from '@/components/property-card';
 import { getServerClient } from '@/lib/api';
@@ -18,11 +19,14 @@ type FeedItem = {
   bedrooms: number;
   /** Real listing IDs link to detail; sample IDs don't. */
   href?: string;
+  lat?: number;
+  lng?: number;
 };
 
 type SearchParams = {
   type?: 'short_let' | 'long_term' | 'commercial' | 'all';
   bedrooms?: string;
+  view?: 'list' | 'map';
 };
 
 const TABS: { label: string; value: SearchParams['type'] }[] = [
@@ -48,17 +52,26 @@ async function loadFeed(
         neighborhood: l.neighborhood,
         bedrooms: l.bedrooms,
         href: `/listings/${l.id}`,
+        lat: l.lat,
+        lng: l.lng,
       }));
     }
   } catch {
     // API unreachable — fall through to mocks.
   }
-  return type === 'short_let' ? sampleShortLets : sampleLongTerms;
+  return (type === 'short_let' ? sampleShortLets : sampleLongTerms).map((l) => ({
+    ...l,
+    // Sample listings sit on a placeholder Lagos coordinate so the map
+    // fallback has something to render in dev.
+    lat: 6.5244,
+    lng: 3.3792,
+  }));
 }
 
 export default async function HomePage({ searchParams }: { searchParams: SearchParams }) {
   const activeType = searchParams.type ?? 'all';
   const bedrooms = searchParams.bedrooms ? Number(searchParams.bedrooms) : undefined;
+  const view: 'list' | 'map' = searchParams.view === 'map' ? 'map' : 'list';
 
   const showShortLets = activeType === 'all' || activeType === 'short_let';
   const showLongTerms = activeType === 'all' || activeType === 'long_term';
@@ -67,6 +80,22 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
     showShortLets ? loadFeed('short_let', bedrooms) : Promise.resolve([] as FeedItem[]),
     showLongTerms ? loadFeed('long_term', bedrooms) : Promise.resolve([] as FeedItem[]),
   ]);
+
+  const mapMarkers = [...shortLets, ...longTerms]
+    .filter((l): l is FeedItem & { lat: number; lng: number } =>
+      typeof l.lat === 'number' && typeof l.lng === 'number',
+    )
+    .map((l) => ({
+      id: l.id,
+      title: l.title,
+      priceKobo: l.priceKobo,
+      pricePeriod: l.pricePeriod,
+      neighborhood: l.neighborhood,
+      bedrooms: l.bedrooms,
+      lat: l.lat,
+      lng: l.lng,
+    }));
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
   return (
     <MobileFrame>
@@ -120,28 +149,51 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
         </button>
       </section>
 
-      <nav className="px-5 pt-3.5 flex gap-1.5 flex-shrink-0">
-        {TABS.map((tab) => {
-          const active = (activeType ?? 'all') === tab.value;
-          const href = tab.value === 'all' ? '/' : `/?type=${tab.value}`;
-          return (
-            <Link
-              key={tab.label}
-              href={href}
-              className={
-                active
-                  ? 'px-4 py-1.5 rounded-pill bg-forest text-white text-xs font-medium'
-                  : 'px-4 py-1.5 rounded-pill bg-parchment border-[1.5px] border-line-soft text-ink-muted text-xs font-medium'
-              }
-            >
-              {tab.label}
-            </Link>
-          );
-        })}
+      <nav className="px-5 pt-3.5 flex items-center justify-between gap-2 flex-shrink-0">
+        <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {TABS.map((tab) => {
+            const active = (activeType ?? 'all') === tab.value;
+            const params = new URLSearchParams();
+            if (tab.value !== 'all') params.set('type', tab.value!);
+            if (view === 'map') params.set('view', 'map');
+            const href = params.toString() ? `/?${params.toString()}` : '/';
+            return (
+              <Link
+                key={tab.label}
+                href={href}
+                className={
+                  active
+                    ? 'px-4 py-1.5 rounded-pill bg-forest text-white text-xs font-medium whitespace-nowrap'
+                    : 'px-4 py-1.5 rounded-pill bg-parchment border-[1.5px] border-line-soft text-ink-muted text-xs font-medium whitespace-nowrap'
+                }
+              >
+                {tab.label}
+              </Link>
+            );
+          })}
+        </div>
+        <Link
+          href={(() => {
+            const params = new URLSearchParams();
+            if (activeType !== 'all') params.set('type', activeType);
+            if (view !== 'map') params.set('view', 'map');
+            return params.toString() ? `/?${params.toString()}` : '/';
+          })()}
+          className={
+            view === 'map'
+              ? 'text-[11px] font-semibold text-white bg-forest border border-forest rounded-pill px-3 py-1.5 whitespace-nowrap'
+              : 'text-[11px] font-semibold text-forest bg-parchment border border-line-soft rounded-pill px-3 py-1.5 whitespace-nowrap'
+          }
+        >
+          {view === 'map' ? '☰ List' : '🗺 Map'}
+        </Link>
       </nav>
 
       <div className="flex-1 overflow-y-auto pt-3.5 pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {showShortLets && shortLets.length > 0 && (
+        {view === 'map' && (
+          <ListingMap listings={mapMarkers} mapboxToken={mapboxToken} />
+        )}
+        {view === 'list' && showShortLets && shortLets.length > 0 && (
           <>
             <div className="flex items-center justify-between px-5 mb-3">
               <h2 className="font-display text-lg text-forest tracking-tight">
@@ -176,7 +228,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
           </>
         )}
 
-        {showLongTerms && longTerms.length > 0 && (
+        {view === 'list' && showLongTerms && longTerms.length > 0 && (
           <>
             <div
               className={`flex items-center justify-between px-5 mb-3 ${
@@ -232,7 +284,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
           </>
         )}
 
-        {!showShortLets && !showLongTerms && (
+        {view === 'list' && !showShortLets && !showLongTerms && (
           <p className="px-5 text-sm text-ink-muted">No listings yet for this filter.</p>
         )}
       </div>

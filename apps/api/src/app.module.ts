@@ -4,6 +4,9 @@ import { AffiliatesModule } from './affiliates/affiliates.module';
 import { AgentsModule } from './agents/agents.module';
 import { AgreementsModule } from './agreements/agreements.module';
 import { AuditModule } from './audit/audit.module';
+import { CorporateModule } from './corporate/corporate.module';
+import { InspectionFirmsModule } from './inspection-firms/inspection-firms.module';
+import { MarketDataModule } from './market-data/market-data.module';
 import { AuthModule } from './auth/auth.module';
 import { BenchmarkModule } from './benchmark/benchmark.module';
 import { ChatModule } from './chat/chat.module';
@@ -54,6 +57,9 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     SubscriptionsModule,
     AffiliatesModule,
     PayoutsModule,
+    InspectionFirmsModule,
+    CorporateModule,
+    MarketDataModule,
     WebhooksModule,
   ],
   controllers: [HealthController],

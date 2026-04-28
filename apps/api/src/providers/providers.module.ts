@@ -9,6 +9,8 @@ import { KYC_PROVIDER } from './kyc/kyc.provider';
 import { NullKycProvider } from './kyc/null-kyc.provider';
 import { NullNotificationsProvider } from './notifications/null-notifications.provider';
 import { NOTIFICATIONS_PROVIDER } from './notifications/notifications.provider';
+import { NullObservabilityProvider } from './observability/null-observability.provider';
+import { OBSERVABILITY_PROVIDER } from './observability/observability.provider';
 import { NullOtpProvider } from './otp/null-otp.provider';
 import { OTP_PROVIDER } from './otp/otp.provider';
 import { NullPaymentsProvider } from './payments/null-payments.provider';
@@ -19,7 +21,7 @@ import { STORAGE_PROVIDER } from './storage/storage.provider';
 /**
  * Wires concrete provider implementations behind their abstract tokens. Swap
  * the `useClass` here when real Dojah / Paystack / Anchor / Mapbox / R2 /
- * Termii implementations land.
+ * Termii / Sentry implementations land.
  */
 @Global()
 @Module({
@@ -32,6 +34,7 @@ import { STORAGE_PROVIDER } from './storage/storage.provider';
     { provide: ESCROW_CUSTODIAN_PROVIDER, useClass: NullEscrowCustodianProvider },
     { provide: CHAIN_ANCHOR_PROVIDER, useClass: NullChainAnchorProvider },
     { provide: NOTIFICATIONS_PROVIDER, useClass: NullNotificationsProvider },
+    { provide: OBSERVABILITY_PROVIDER, useClass: NullObservabilityProvider },
   ],
   exports: [
     KYC_PROVIDER,
@@ -42,6 +45,7 @@ import { STORAGE_PROVIDER } from './storage/storage.provider';
     ESCROW_CUSTODIAN_PROVIDER,
     CHAIN_ANCHOR_PROVIDER,
     NOTIFICATIONS_PROVIDER,
+    OBSERVABILITY_PROVIDER,
   ],
 })
 export class ProvidersModule {}

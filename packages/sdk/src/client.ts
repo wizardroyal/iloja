@@ -473,6 +473,76 @@ export class IlojaClient {
     return this.request('GET', '/flags/mine');
   }
 
+  // ───── Inspection firms (Phase 3) ─────
+
+  async listInspectionFirms(zone?: string): Promise<InspectionFirmResponse[]> {
+    const qs = zone ? `?zone=${encodeURIComponent(zone)}` : '';
+    return this.request('GET', `/inspection-firms${qs}`);
+  }
+
+  async bookInspectionFirm(input: {
+    firmId: string;
+    listingId: string;
+    scheduledAt?: string;
+    notes?: string;
+  }): Promise<InspectionFirmBookingResponse> {
+    return this.request('POST', '/inspection-firms/bookings', input);
+  }
+
+  async listMyFirmBookings(): Promise<InspectionFirmBookingResponse[]> {
+    return this.request('GET', '/inspection-firms/bookings/mine');
+  }
+
+  // ───── Corporate concierge (Phase 3, admin) ─────
+
+  async listCorporateAccounts(): Promise<CorporateAccountResponse[]> {
+    return this.request('GET', '/corporate/accounts');
+  }
+
+  async createCorporateAccount(input: {
+    name: string;
+    notes?: string;
+    placementFeeKobo: string;
+    contactPhone?: string;
+    contactEmail?: string;
+  }): Promise<CorporateAccountResponse> {
+    return this.request('POST', '/corporate/accounts', input);
+  }
+
+  async listPlacementRequests(): Promise<PlacementRequestResponse[]> {
+    return this.request('GET', '/corporate/placements');
+  }
+
+  async createPlacementRequest(input: {
+    corporateAccountId: string;
+    hrContactName: string;
+    budgetMinKobo?: string;
+    budgetMaxKobo?: string;
+    bedrooms?: number;
+    preferredZones?: string[];
+    needBy?: string;
+    notes?: string;
+  }): Promise<PlacementRequestResponse> {
+    return this.request('POST', '/corporate/placements', input);
+  }
+
+  async suggestPlacementMatches(id: string): Promise<ListingResponse[]> {
+    return this.request('GET', `/corporate/placements/${id}/matches`);
+  }
+
+  async matchPlacement(
+    id: string,
+    input: { matchedListingId: string; placedRenterId?: string },
+  ): Promise<PlacementRequestResponse> {
+    return this.request('POST', `/corporate/placements/${id}/match`, input);
+  }
+
+  // ───── Market data (Phase 3, admin) ─────
+
+  async getMarketSnapshot(): Promise<MarketSnapshotResponse> {
+    return this.request('GET', '/market-data/snapshot');
+  }
+
   // ───── internals ─────
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -701,6 +771,81 @@ export interface SavedSearchResponse {
   maxPriceKobo: string | null;
   lastAlertedAt: string | null;
   createdAt: string;
+}
+
+export interface InspectionFirmResponse {
+  id: string;
+  name: string;
+  zones: string[];
+  rateKobo: string;
+  coordinationBps: number;
+  active: boolean;
+  contactPhone: string | null;
+  contactEmail: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InspectionFirmBookingResponse {
+  id: string;
+  firmId: string;
+  byUserId: string;
+  listingId: string;
+  status: 'pending' | 'accepted' | 'completed' | 'cancelled';
+  rateKobo: string;
+  coordinationFeeKobo: string;
+  scheduledAt: string | null;
+  notes: string | null;
+  createdAt: string;
+  acceptedAt: string | null;
+  completedAt: string | null;
+}
+
+export interface CorporateAccountResponse {
+  id: string;
+  name: string;
+  notes: string | null;
+  placementFeeKobo: string;
+  contactPhone: string | null;
+  contactEmail: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PlacementRequestResponse {
+  id: string;
+  corporateAccountId: string;
+  hrContactName: string;
+  budgetMinKobo: string | null;
+  budgetMaxKobo: string | null;
+  bedrooms: number | null;
+  preferredZones: string[];
+  needBy: string | null;
+  notes: string | null;
+  status: 'open' | 'matched' | 'placed' | 'cancelled';
+  matchedListingId: string | null;
+  placedRenterId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  placedAt: string | null;
+}
+
+export interface MarketSnapshotResponse {
+  generatedAt: string;
+  neighborhoods: {
+    neighborhood: string;
+    activeListings: number;
+    medianPriceKobo: string | null;
+  }[];
+  verifiedPerMonth: { month: string; count: number }[];
+  inspectionsPerMonth: { month: string; count: number }[];
+  escrowReleasesPerMonth: { month: string; count: number }[];
+  byType: {
+    type: 'short_let' | 'long_term' | 'commercial';
+    activeListings: number;
+    medianPriceKobo: string | null;
+  }[];
 }
 
 export interface UserBankAccountResponse {

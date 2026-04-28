@@ -4,6 +4,7 @@ import pino from 'pino';
 import { handleChainAnchor } from './processors/chain-anchor';
 import { handleEscrowTimer } from './processors/escrow-timers';
 import { handleInspectionReminder } from './processors/inspection-reminders';
+import { handleMaintenance } from './processors/maintenance';
 import { handleNotificationDispatch } from './processors/notifications';
 import { handlePayoutDispatch } from './processors/payouts';
 import { handleSavedSearchAlerts } from './processors/saved-search-alerts';
@@ -21,9 +22,7 @@ const processors: Record<QueueName, (jobName: string, data: unknown) => Promise<
   [QUEUES.CHAIN_ANCHOR]: handleChainAnchor,
   [QUEUES.NOTIFICATIONS]: handleNotificationDispatch,
   [QUEUES.INSPECTION_REMINDERS]: handleInspectionReminder,
-  [QUEUES.LISTING_REVERIFICATION]: async (jobName, data) => {
-    log.info({ jobName, data }, 'listing re-verification (stub — Phase 2)');
-  },
+  [QUEUES.LISTING_REVERIFICATION]: handleMaintenance,
   [QUEUES.SAVED_SEARCH_ALERTS]: handleSavedSearchAlerts,
   [QUEUES.PAYOUTS]: handlePayoutDispatch,
 };
@@ -61,6 +60,21 @@ async function registerRepeatingJobs(connection: IORedis): Promise<Queue[]> {
   );
   queues.push(alertsQueue);
   log.info('registered hourly saved_searches.run_alerts');
+
+  // Hourly housekeeping — currently expires past-period subscriptions.
+  const maintenanceQueue = new Queue(QUEUES.LISTING_REVERIFICATION, { connection });
+  await maintenanceQueue.add(
+    'subscriptions.sweep_expired',
+    {},
+    {
+      repeat: { every: 60 * 60 * 1000 },
+      jobId: 'subscriptions.sweep_expired.repeat',
+      removeOnComplete: 50,
+      removeOnFail: 100,
+    },
+  );
+  queues.push(maintenanceQueue);
+  log.info('registered hourly subscriptions.sweep_expired');
   return queues;
 }
 
